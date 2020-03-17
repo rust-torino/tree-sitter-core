@@ -23,13 +23,13 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: fmt
-        args: -- --check --verbose
+        args: --all -- --check --verbose
 
     - name: Run clippy
       uses: actions-rs/clippy-check@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-features -- --verbose
+        args: --all --all-features --tests -- --verbose
 
 
 #  cargo-grcov:
@@ -111,7 +111,7 @@ jobs:
 #          -Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off
 #          -Zno-landing-pads
 #      run: |
-#        cargo test --all-features --no-fail-fast --verbose
+#        cargo test --all --all-features --no-fail-fast --verbose
 #
 #    - name: Run grcov
 #      id: coverage
@@ -213,8 +213,8 @@ jobs:
 
     - name: Run no-default-features tests
       run: |
-        cargo test --no-default-features
+        cargo test --all --no-default-features
 
     - name: Run all-features tests
       run: |
-        cargo test --all-features
+        cargo test --all --all-features
