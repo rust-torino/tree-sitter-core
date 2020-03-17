@@ -117,6 +117,7 @@ pub type uint8_t = __uint8_t;
 pub type uint16_t = __uint16_t;
 pub type uint32_t = __uint32_t;
 pub type uint64_t = __uint64_t;
+
 /* ***************************/
 /* Section - ABI Versioning */
 /* ***************************/
@@ -127,10 +128,14 @@ pub type uint64_t = __uint64_t;
  * The Tree-sitter library is generally backwards-compatible with languages
  * generated using older CLI versions, but is not forwards-compatible.
  */
+pub const TREE_SITTER_LANGUAGE_VERSION: usize = 11;
+
 /* *
  * The earliest ABI version that is supported by the current version of the
  * library.
  */
+pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: usize = 9;
+
 /* ******************/
 /* Section - Types */
 /* ******************/
