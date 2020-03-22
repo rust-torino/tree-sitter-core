@@ -1,6 +1,6 @@
 # Experimental oxidation of tree-sitter
 
-[![Actions Status](https://github.com/lu-zero/tree-sitter-core/workflows/ci/badge.svg)](https://github.com/lu-zero/tree-sitter-core/actions)
+[![Actions Status](https://github.com/lu-zero/tree-sitter-core/workflows/tree-sitter-core/badge.svg)](https://github.com/lu-zero/tree-sitter-core/actions)
 
 ## TODO
 - [x] Oxidize
