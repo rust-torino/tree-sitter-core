@@ -1,9 +1,9 @@
 use ::c2rust_bitfields;
 use ::libc;
 extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
+    //pub type _IO_wide_data;
+    //pub type _IO_codecvt;
+    //pub type _IO_marker;
     #[no_mangle]
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
     #[no_mangle]
@@ -90,7 +90,7 @@ pub struct _IO_FILE {
     pub _IO_save_base: *mut libc::c_char,
     pub _IO_backup_base: *mut libc::c_char,
     pub _IO_save_end: *mut libc::c_char,
-    pub _markers: *mut _IO_marker,
+    //pub _markers: *mut _IO_marker,
     pub _chain: *mut _IO_FILE,
     pub _fileno: libc::c_int,
     pub _flags2: libc::c_int,
@@ -100,8 +100,8 @@ pub struct _IO_FILE {
     pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
     pub _offset: __off64_t,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
+    //pub _codecvt: *mut _IO_codecvt,
+    //pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,
     pub _freeres_buf: *mut libc::c_void,
     pub __pad5: size_t,
@@ -1450,7 +1450,7 @@ unsafe extern "C" fn ts_subtree_from_mut(mut self_0: MutableSubtree) -> Subtree 
     return result;
 }
 #[inline]
-unsafe extern "C" fn ts_toggle_allocation_recording(mut value: bool) -> bool {
+unsafe extern "C" fn ts_toggle_allocation_recording(mut _value: bool) -> bool {
     return 0 as libc::c_int != 0;
 }
 #[inline]
@@ -3431,13 +3431,13 @@ unsafe extern "C" fn ts_decode_utf16(
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     let fresh9 = i;
     i = i.wrapping_add(1);
-    *code_point = *(string as *mut uint16_t).offset(fresh9 as isize) as int32_t;
+    *code_point = *(string as *mut uint8_t).offset(fresh9 as isize) as int32_t;
     if *code_point as libc::c_uint & 0xfffffc00 as libc::c_uint
         == 0xd800 as libc::c_int as libc::c_uint
     {
         let mut __c2: uint16_t = 0;
         if i != length && {
-            __c2 = *(string as *mut uint16_t).offset(i as isize);
+            __c2 = (*(string as *mut uint8_t).offset(i as isize)).into();
             (__c2 as libc::c_uint & 0xfffffc00 as libc::c_uint)
                 == 0xdc00 as libc::c_int as libc::c_uint
         } {
@@ -3705,16 +3705,14 @@ unsafe extern "C" fn ts_node__prev_sibling(
             if child.id == self_0.id {
                 break;
             }
-            if iterator.position.bytes > target_end_byte {
-                found_child_containing_target = 1 as libc::c_int != 0;
-                break;
-            } else if iterator.position.bytes == target_end_byte
-                && (!self_is_empty
-                    || ts_subtree_has_trailing_empty_descendant(
-                        ts_node__subtree(child),
-                        self_subtree,
-                    ) as libc::c_int
-                        != 0)
+            if iterator.position.bytes > target_end_byte
+                || (iterator.position.bytes == target_end_byte
+                    && (!self_is_empty
+                        || ts_subtree_has_trailing_empty_descendant(
+                            ts_node__subtree(child),
+                            self_subtree,
+                        ) as libc::c_int
+                            != 0))
             {
                 found_child_containing_target = 1 as libc::c_int != 0;
                 break;
@@ -4374,7 +4372,8 @@ unsafe extern "C" fn reusable_node_tree(mut self_0: *mut ReusableNode) -> Subtre
 }
 #[inline]
 unsafe extern "C" fn atomic_load(mut p: *const size_t) -> size_t {
-    return ::std::intrinsics::atomic_load_relaxed(p);
+    return *p;
+    //return ::std::intrinsics::atomic_load_relaxed(p);
 }
 #[inline]
 unsafe extern "C" fn reusable_node_advance_past_leaf(mut self_0: *mut ReusableNode) {
@@ -4545,13 +4544,13 @@ unsafe extern "C" fn clock_now() -> TSClock {
 unsafe extern "C" fn atomic_inc(mut p: *mut uint32_t) -> uint32_t {
     let fresh13 = p;
     let fresh14 = 1 as libc::c_uint;
-    return ::std::intrinsics::atomic_xadd(fresh13, fresh14) + fresh14;
+    return *fresh13 + fresh14 + fresh14;
 }
 #[inline]
 unsafe extern "C" fn atomic_dec(mut p: *mut uint32_t) -> uint32_t {
     let fresh15 = p;
     let fresh16 = 1 as libc::c_uint;
-    return ::std::intrinsics::atomic_xsub(fresh15, fresh16) - fresh16;
+    return *fresh15 - fresh16 - fresh16;
 }
 #[inline]
 unsafe extern "C" fn clock_is_gt(mut self_0: TSClock, mut other: TSClock) -> bool {
@@ -6193,7 +6192,7 @@ unsafe extern "C" fn ts_parser__reuse_node(
     };
 }
 unsafe extern "C" fn ts_parser__compare_versions(
-    mut self_0: *mut TSParser,
+    mut _self_0: *mut TSParser,
     mut a: ErrorStatus,
     mut b: ErrorStatus,
 ) -> ErrorComparison {
@@ -7504,7 +7503,8 @@ unsafe extern "C" fn stream_advance(mut self_0: *mut Stream) -> bool {
     if (*self_0).input < (*self_0).end {
         let mut size: uint32_t = ts_decode_utf8(
             (*self_0).input as *const uint8_t,
-            (*self_0).end.wrapping_offset_from((*self_0).input) as libc::c_long as uint32_t,
+            (((*self_0).end as usize - (*self_0).input as usize)
+                / ::std::mem::size_of::<libc::c_char>()) as libc::c_long as uint32_t,
             &mut (*self_0).next,
         );
         if size > 0 as libc::c_int as libc::c_uint {
@@ -7547,9 +7547,11 @@ unsafe extern "C" fn stream_skip_whitespace(mut stream: *mut Stream) {
             }
             // skip over comments
             stream_advance(stream);
-            while (*stream).next != 0 && (*stream).next != '\n' as i32 {
-                if !stream_advance(stream) {
-                    break;
+            if (*stream).next != 0 && (*stream).next != '\n' as i32 {
+                loop {
+                    if !stream_advance(stream) {
+                        break;
+                    }
                 }
             }
         }
@@ -8094,8 +8096,9 @@ unsafe extern "C" fn ts_query__parse_predicate(
                 }
                 let mut capture_name: *const libc::c_char = (*stream).input;
                 stream_scan_identifier(stream);
-                let mut length: uint32_t =
-                    (*stream).input.wrapping_offset_from(capture_name) as libc::c_long as uint32_t;
+                let mut length: uint32_t = (((*stream).input as usize - capture_name as usize)
+                    / ::std::mem::size_of::<libc::c_char>())
+                    as libc::c_long as uint32_t;
                 // Add the capture id to the first step of the pattern
                 let mut capture_id: libc::c_int =
                     symbol_table_id_for_name(&mut (*self_0).captures, capture_name, length);
@@ -8169,7 +8172,8 @@ unsafe extern "C" fn ts_query__parse_predicate(
                         return TSQueryErrorSyntax;
                     }
                 }
-                let mut length_0: uint32_t = (*stream).input.wrapping_offset_from(string_content)
+                let mut length_0: uint32_t = (((*stream).input as usize - string_content as usize)
+                    / ::std::mem::size_of::<libc::c_char>())
                     as libc::c_long as uint32_t;
                 // Add a step for the node
                 let mut id: uint16_t = symbol_table_insert_name_with_escapes(
@@ -8222,8 +8226,9 @@ unsafe extern "C" fn ts_query__parse_predicate(
             } else if stream_is_ident_start(stream) {
                 let mut symbol_start: *const libc::c_char = (*stream).input;
                 stream_scan_identifier(stream);
-                let mut length_1: uint32_t =
-                    (*stream).input.wrapping_offset_from(symbol_start) as libc::c_long as uint32_t;
+                let mut length_1: uint32_t = (((*stream).input as usize - symbol_start as usize)
+                    / ::std::mem::size_of::<libc::c_char>())
+                    as libc::c_long as uint32_t;
                 let mut id_0: uint16_t = symbol_table_insert_name(
                     &mut (*self_0).predicate_values,
                     symbol_start,
@@ -8339,8 +8344,9 @@ unsafe extern "C" fn ts_query__parse_pattern(
             } else if stream_is_ident_start(stream) {
                 let mut node_name: *const libc::c_char = (*stream).input;
                 stream_scan_identifier(stream);
-                let mut length: uint32_t =
-                    (*stream).input.wrapping_offset_from(node_name) as libc::c_long as uint32_t;
+                let mut length: uint32_t = (((*stream).input as usize - node_name as usize)
+                    / ::std::mem::size_of::<libc::c_char>())
+                    as libc::c_long as uint32_t;
                 symbol = ts_language_symbol_for_name(
                     (*self_0).language,
                     node_name,
@@ -8404,14 +8410,17 @@ unsafe extern "C" fn ts_query__parse_pattern(
             // Parse a double-quoted anonymous leaf node expression
             // Parse the string content
             let mut string_content: *const libc::c_char = (*stream).input;
-            while (*stream).next != '\"' as i32 {
-                if !stream_advance(stream) {
-                    stream_reset(stream, string_content.offset(-(1 as libc::c_int as isize)));
-                    return TSQueryErrorSyntax;
+            if (*stream).next != '\"' as i32 {
+                loop {
+                    if !stream_advance(stream) {
+                        stream_reset(stream, string_content.offset(-(1 as libc::c_int as isize)));
+                        return TSQueryErrorSyntax;
+                    }
                 }
             }
-            let mut length_0: uint32_t =
-                (*stream).input.wrapping_offset_from(string_content) as libc::c_long as uint32_t;
+            let mut length_0: uint32_t = (((*stream).input as usize - string_content as usize)
+                / ::std::mem::size_of::<libc::c_char>())
+                as libc::c_long as uint32_t;
             // Add a step for the node
             let mut symbol_0: TSSymbol = ts_language_symbol_for_name(
                 (*self_0).language,
@@ -8441,8 +8450,9 @@ unsafe extern "C" fn ts_query__parse_pattern(
             // Parse the field name
             let mut field_name: *const libc::c_char = (*stream).input;
             stream_scan_identifier(stream);
-            let mut length_1: uint32_t =
-                (*stream).input.wrapping_offset_from(field_name) as libc::c_long as uint32_t;
+            let mut length_1: uint32_t = (((*stream).input as usize - field_name as usize)
+                / ::std::mem::size_of::<libc::c_char>())
+                as libc::c_long as uint32_t;
             stream_skip_whitespace(stream);
             if (*stream).next != ':' as i32 {
                 stream_reset(stream, field_name);
@@ -8488,27 +8498,30 @@ unsafe extern "C" fn ts_query__parse_pattern(
     }
     stream_skip_whitespace(stream);
     // Parse an '@'-prefixed capture pattern
-    while (*stream).next == '@' as i32 {
-        stream_advance(stream);
-        // Parse the capture name
-        if !stream_is_ident_start(stream) {
-            return TSQueryErrorSyntax;
+    if (*stream).next == '@' as i32 {
+        loop {
+            stream_advance(stream);
+            // Parse the capture name
+            if !stream_is_ident_start(stream) {
+                return TSQueryErrorSyntax;
+            }
+            let mut capture_name: *const libc::c_char = (*stream).input;
+            stream_scan_identifier(stream);
+            let mut length_2: uint32_t = (((*stream).input as usize - capture_name as usize)
+                / ::std::mem::size_of::<libc::c_char>())
+                as libc::c_long as uint32_t;
+            // Add the capture id to the first step of the pattern
+            let mut capture_id: uint16_t =
+                symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
+            let mut step: *mut QueryStep = &mut *(*self_0)
+                .steps
+                .contents
+                .offset(starting_step_index as isize)
+                as *mut QueryStep;
+            query_step__add_capture(step, capture_id);
+            *capture_count = (*capture_count).wrapping_add(1);
+            stream_skip_whitespace(stream);
         }
-        let mut capture_name: *const libc::c_char = (*stream).input;
-        stream_scan_identifier(stream);
-        let mut length_2: uint32_t =
-            (*stream).input.wrapping_offset_from(capture_name) as libc::c_long as uint32_t;
-        // Add the capture id to the first step of the pattern
-        let mut capture_id: uint16_t =
-            symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
-        let mut step: *mut QueryStep = &mut *(*self_0)
-            .steps
-            .contents
-            .offset(starting_step_index as isize)
-            as *mut QueryStep;
-        query_step__add_capture(step, capture_id);
-        *capture_count = (*capture_count).wrapping_add(1);
-        stream_skip_whitespace(stream);
     }
     return TSQueryErrorNone;
 }
@@ -8621,8 +8634,9 @@ pub unsafe extern "C" fn ts_query_new(
         *(*self_0)
             .start_bytes_by_pattern
             .contents
-            .offset(fresh38 as isize) =
-            stream.input.wrapping_offset_from(source) as libc::c_long as uint32_t;
+            .offset(fresh38 as isize) = ((stream.input as usize - source as usize)
+            / ::std::mem::size_of::<libc::c_char>())
+            as libc::c_long as uint32_t;
         array__grow(
             &mut (*self_0).predicates_by_pattern as *mut C2RustUnnamed_12 as *mut VoidArray,
             1 as libc::c_int as size_t,
@@ -8662,7 +8676,9 @@ pub unsafe extern "C" fn ts_query_new(
         // If any pattern could not be parsed, then report the error information
         // and terminate.
         if *error_type as u64 != 0 {
-            *error_offset = stream.input.wrapping_offset_from(source) as libc::c_long as uint32_t;
+            *error_offset = ((stream.input as usize - source as usize)
+                / ::std::mem::size_of::<libc::c_char>()) as libc::c_long
+                as uint32_t;
             ts_query_delete(self_0);
             return 0 as *mut TSQuery;
         }
@@ -10550,7 +10566,7 @@ pub unsafe extern "C" fn ts_stack_pop_count(
 }
 #[inline(always)]
 unsafe extern "C" fn pop_pending_callback(
-    mut payload: *mut libc::c_void,
+    mut _payload: *mut libc::c_void,
     mut iterator: *const StackIterator,
 ) -> StackAction {
     if (*iterator).subtree_count >= 1 as libc::c_int as libc::c_uint {
@@ -10692,7 +10708,7 @@ pub unsafe extern "C" fn ts_stack_pop_error(
 }
 #[inline(always)]
 unsafe extern "C" fn pop_all_callback(
-    mut payload: *mut libc::c_void,
+    mut _payload: *mut libc::c_void,
     mut iterator: *const StackIterator,
 ) -> StackAction {
     return if (*(*iterator).node).link_count as libc::c_int == 0 as libc::c_int {
@@ -12761,7 +12777,8 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                 snprintf(*writer, limit, b")\x00" as *const u8 as *const libc::c_char) as isize,
             )
     }
-    return cursor.wrapping_offset_from(string) as libc::c_long as size_t;
+    return ((cursor as usize - string as usize) / ::std::mem::size_of::<libc::c_char>())
+        as libc::c_long as size_t;
 }
 static mut ROOT_FIELD: *const libc::c_char = b"__ROOT__\x00" as *const u8 as *const libc::c_char;
 #[no_mangle]

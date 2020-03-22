@@ -5,13 +5,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(unused_assignments)]
 #![allow(unused_mut)]
-#![feature(const_raw_ptr_to_usize_cast)]
-#![feature(core_intrinsics)]
-#![feature(extern_types)]
-#![feature(label_break_value)]
-#![feature(ptr_wrapping_offset_from)]
-#![feature(register_tool)]
-#![register_tool(c2rust)]
 
 #[macro_use]
 extern crate c2rust_bitfields;
