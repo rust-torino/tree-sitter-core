@@ -2,6 +2,8 @@
 
 [![Actions Status](https://github.com/lu-zero/tree-sitter-core/workflows/tree-sitter-core/badge.svg)](https://github.com/lu-zero/tree-sitter-core/actions)
 
+[![Coverage Status](https://coveralls.io/repos/github/lu-zero/tree-sitter-core/badge.svg?branch=master)](https://coveralls.io/github/lu-zero/tree-sitter-core?branch=master)
+
 ## TODO
 - [x] Oxidize
 - [x] cargo-c/cbindgen configuration
