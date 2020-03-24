@@ -1,5 +1,7 @@
 use ::c2rust_bitfields;
 use ::libc;
+use std::sync::atomic::{AtomicIsize, Ordering};
+
 extern "C" {
     //pub type _IO_wide_data;
     //pub type _IO_codecvt;
@@ -4542,15 +4544,19 @@ unsafe extern "C" fn clock_now() -> TSClock {
 }
 #[inline]
 unsafe extern "C" fn atomic_inc(mut p: *mut uint32_t) -> uint32_t {
-    let fresh13 = p;
+    let fresh13 = AtomicIsize::new(*p as isize);
     let fresh14 = 1 as libc::c_uint;
-    return *fresh13 + fresh14 + fresh14;
+    let old_value = fresh13.fetch_add(fresh14 as isize, Ordering::SeqCst);
+    *p = fresh13.load(Ordering::SeqCst) as u32;
+    return old_value as u32 + fresh14;
 }
 #[inline]
 unsafe extern "C" fn atomic_dec(mut p: *mut uint32_t) -> uint32_t {
-    let fresh15 = p;
+    let fresh15 = AtomicIsize::new(*p as isize);
     let fresh16 = 1 as libc::c_uint;
-    return *fresh15 - fresh16 - fresh16;
+    let old_value = fresh15.fetch_sub(fresh16 as isize, Ordering::SeqCst);
+    *p = fresh15.load(Ordering::SeqCst) as u32;
+    return old_value as u32 + fresh16;
 }
 #[inline]
 unsafe extern "C" fn clock_is_gt(mut self_0: TSClock, mut other: TSClock) -> bool {
