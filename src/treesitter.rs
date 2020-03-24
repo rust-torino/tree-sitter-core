@@ -1,3 +1,5 @@
+#![allow(clippy::cast_ptr_alignment)]
+
 use ::c2rust_bitfields;
 use ::libc;
 use std::sync::atomic::{AtomicIsize, Ordering};
@@ -3433,7 +3435,7 @@ unsafe extern "C" fn ts_decode_utf16(
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     let fresh9 = i;
     i = i.wrapping_add(1);
-    *code_point = *(string as *mut uint8_t).offset(fresh9 as isize) as int32_t;
+    *code_point = *(string as *mut uint16_t).offset(fresh9 as isize) as int32_t;
     if *code_point as libc::c_uint & 0xfffffc00 as libc::c_uint
         == 0xd800 as libc::c_int as libc::c_uint
     {
@@ -7553,11 +7555,10 @@ unsafe extern "C" fn stream_skip_whitespace(mut stream: *mut Stream) {
             }
             // skip over comments
             stream_advance(stream);
-            if (*stream).next != 0 && (*stream).next != '\n' as i32 {
-                loop {
-                    if !stream_advance(stream) {
-                        break;
-                    }
+            #[allow(clippy::while_immutable_condition)]
+            while (*stream).next != 0 && (*stream).next != '\n' as i32 {
+                if !stream_advance(stream) {
+                    break;
                 }
             }
         }
@@ -8416,12 +8417,11 @@ unsafe extern "C" fn ts_query__parse_pattern(
             // Parse a double-quoted anonymous leaf node expression
             // Parse the string content
             let mut string_content: *const libc::c_char = (*stream).input;
-            if (*stream).next != '\"' as i32 {
-                loop {
-                    if !stream_advance(stream) {
-                        stream_reset(stream, string_content.offset(-(1 as libc::c_int as isize)));
-                        return TSQueryErrorSyntax;
-                    }
+            #[allow(clippy::while_immutable_condition)]
+            while (*stream).next != '\"' as i32 {
+                if !stream_advance(stream) {
+                    stream_reset(stream, string_content.offset(-(1 as libc::c_int as isize)));
+                    return TSQueryErrorSyntax;
                 }
             }
             let mut length_0: uint32_t = (((*stream).input as usize - string_content as usize)
@@ -8504,30 +8504,29 @@ unsafe extern "C" fn ts_query__parse_pattern(
     }
     stream_skip_whitespace(stream);
     // Parse an '@'-prefixed capture pattern
-    if (*stream).next == '@' as i32 {
-        loop {
-            stream_advance(stream);
-            // Parse the capture name
-            if !stream_is_ident_start(stream) {
-                return TSQueryErrorSyntax;
-            }
-            let mut capture_name: *const libc::c_char = (*stream).input;
-            stream_scan_identifier(stream);
-            let mut length_2: uint32_t = (((*stream).input as usize - capture_name as usize)
-                / ::std::mem::size_of::<libc::c_char>())
-                as libc::c_long as uint32_t;
-            // Add the capture id to the first step of the pattern
-            let mut capture_id: uint16_t =
-                symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
-            let mut step: *mut QueryStep = &mut *(*self_0)
-                .steps
-                .contents
-                .offset(starting_step_index as isize)
-                as *mut QueryStep;
-            query_step__add_capture(step, capture_id);
-            *capture_count = (*capture_count).wrapping_add(1);
-            stream_skip_whitespace(stream);
+    #[allow(clippy::while_immutable_condition)]
+    while (*stream).next == '@' as i32 {
+        stream_advance(stream);
+        // Parse the capture name
+        if !stream_is_ident_start(stream) {
+            return TSQueryErrorSyntax;
         }
+        let mut capture_name: *const libc::c_char = (*stream).input;
+        stream_scan_identifier(stream);
+        let mut length_2: uint32_t = (((*stream).input as usize - capture_name as usize)
+            / ::std::mem::size_of::<libc::c_char>())
+            as libc::c_long as uint32_t;
+        // Add the capture id to the first step of the pattern
+        let mut capture_id: uint16_t =
+            symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
+        let mut step: *mut QueryStep = &mut *(*self_0)
+            .steps
+            .contents
+            .offset(starting_step_index as isize)
+            as *mut QueryStep;
+        query_step__add_capture(step, capture_id);
+        *capture_count = (*capture_count).wrapping_add(1);
+        stream_skip_whitespace(stream);
     }
     return TSQueryErrorNone;
 }
