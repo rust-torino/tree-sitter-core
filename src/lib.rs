@@ -9,5 +9,20 @@
 #[macro_use]
 extern crate c2rust_bitfields;
 
-mod treesitter;
-pub use treesitter::*;
+pub mod api;
+mod get_changed_ranges;
+mod language;
+mod lexer;
+mod node;
+mod parser;
+mod query;
+mod reusable_node;
+mod stack;
+mod subtree;
+mod tree;
+mod tree_cursor;
+mod util;
+
+pub use api::*;
+
+use reusable_node::*;
