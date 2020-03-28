@@ -31,24 +31,12 @@ pub struct CursorChildIterator {
 unsafe extern "C" fn ts_tree_cursor_iterate_children(
     mut self_0: *const TreeCursor,
 ) -> CursorChildIterator {
-    if (*self_0)
+    assert!((*self_0)
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->stack)->size - 1 < (&self->stack)->size\x00" as *const u8
-                as *const libc::c_char,
-            b"lib/src/tree_cursor.c\x00" as *const u8 as *const libc::c_char,
-            19 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 72], &[libc::c_char; 72]>(
-                b"CursorChildIterator ts_tree_cursor_iterate_children(const TreeCursor *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut last_entry: *mut TreeCursorEntry = &mut *(*self_0).stack.contents.offset(
         (*self_0)
             .stack
@@ -406,24 +394,12 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_current_node(mut _self: *const TSTreeCursor) -> TSNode {
     let mut self_0: *const TreeCursor = _self as *const TreeCursor;
-    if (*self_0)
+    assert!((*self_0)
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->stack)->size - 1 < (&self->stack)->size\x00" as *const u8
-                as *const libc::c_char,
-            b"lib/src/tree_cursor.c\x00" as *const u8 as *const libc::c_char,
-            227 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 57], &[libc::c_char; 57]>(
-                b"TSNode ts_tree_cursor_current_node(const TSTreeCursor *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut last_entry: *mut TreeCursorEntry = &mut *(*self_0).stack.contents.offset(
         (*self_0)
             .stack

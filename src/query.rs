@@ -741,21 +741,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
         if (*stream).next == ')' as i32 {
             stream_advance(stream);
             stream_skip_whitespace(stream);
-            if (*self_0)
+            assert!((*self_0)
                 .predicates_by_pattern
                 .size
                 .wrapping_sub(1 as libc::c_int as libc::c_uint)
                 < (*self_0).predicates_by_pattern.size
-            {
-            } else {
-                __assert_fail(b"(uint32_t)(&self->predicates_by_pattern)->size - 1 < (&self->predicates_by_pattern)->size\x00"
-                                  as *const u8 as *const libc::c_char,
-                              b"lib/src/query.c\x00" as *const u8 as
-                                  *const libc::c_char,
-                              546 as libc::c_int as libc::c_uint,
-                              (*::std::mem::transmute::<&[u8; 60],
-                                                        &[libc::c_char; 60]>(b"TSQueryError ts_query__parse_predicate(TSQuery *, Stream *)\x00")).as_ptr());
-            }
+            );
             let ref mut fresh3 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                 (*self_0)
                     .predicates_by_pattern
@@ -798,21 +789,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     stream_reset(stream, capture_name);
                     return TSQueryErrorCapture;
                 }
-                if (*self_0)
+                assert!((*self_0)
                     .predicates_by_pattern
                     .size
                     .wrapping_sub(1 as libc::c_int as libc::c_uint)
                     < (*self_0).predicates_by_pattern.size
-                {
-                } else {
-                    __assert_fail(b"(uint32_t)(&self->predicates_by_pattern)->size - 1 < (&self->predicates_by_pattern)->size\x00"
-                                      as *const u8 as *const libc::c_char,
-                                  b"lib/src/query.c\x00" as *const u8 as
-                                      *const libc::c_char,
-                                  575 as libc::c_int as libc::c_uint,
-                                  (*::std::mem::transmute::<&[u8; 60],
-                                                            &[libc::c_char; 60]>(b"TSQueryError ts_query__parse_predicate(TSQuery *, Stream *)\x00")).as_ptr());
-                }
+                );
                 let ref mut fresh5 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
                         .predicates_by_pattern
@@ -872,21 +854,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     string_content,
                     length_0,
                 );
-                if (*self_0)
+                assert!((*self_0)
                     .predicates_by_pattern
                     .size
                     .wrapping_sub(1 as libc::c_int as libc::c_uint)
                     < (*self_0).predicates_by_pattern.size
-                {
-                } else {
-                    __assert_fail(b"(uint32_t)(&self->predicates_by_pattern)->size - 1 < (&self->predicates_by_pattern)->size\x00"
-                                      as *const u8 as *const libc::c_char,
-                                  b"lib/src/query.c\x00" as *const u8 as
-                                      *const libc::c_char,
-                                  615 as libc::c_int as libc::c_uint,
-                                  (*::std::mem::transmute::<&[u8; 60],
-                                                            &[libc::c_char; 60]>(b"TSQueryError ts_query__parse_predicate(TSQuery *, Stream *)\x00")).as_ptr());
-                }
+                );
                 let ref mut fresh7 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
                         .predicates_by_pattern
@@ -924,21 +897,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     symbol_start,
                     length_1,
                 );
-                if (*self_0)
+                assert!((*self_0)
                     .predicates_by_pattern
                     .size
                     .wrapping_sub(1 as libc::c_int as libc::c_uint)
                     < (*self_0).predicates_by_pattern.size
-                {
-                } else {
-                    __assert_fail(b"(uint32_t)(&self->predicates_by_pattern)->size - 1 < (&self->predicates_by_pattern)->size\x00"
-                                      as *const u8 as *const libc::c_char,
-                                  b"lib/src/query.c\x00" as *const u8 as
-                                      *const libc::c_char,
-                                  635 as libc::c_int as libc::c_uint,
-                                  (*::std::mem::transmute::<&[u8; 60],
-                                                            &[libc::c_char; 60]>(b"TSQueryError ts_query__parse_predicate(TSQuery *, Stream *)\x00")).as_ptr());
-                }
+                );
                 let ref mut fresh9 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
                         .predicates_by_pattern
@@ -1738,24 +1702,12 @@ unsafe extern "C" fn ts_query__cursor_copy_state(
     let fresh19 = (*self_0).states.size;
     (*self_0).states.size = (*self_0).states.size.wrapping_add(1);
     *(*self_0).states.contents.offset(fresh19 as isize) = *state;
-    if (*self_0)
+    assert!((*self_0)
         .states
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).states.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->states)->size - 1 < (&self->states)->size\x00" as *const u8
-                as *const libc::c_char,
-            b"lib/src/query.c\x00" as *const u8 as *const libc::c_char,
-            1208 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 77], &[libc::c_char; 77]>(
-                b"QueryState *ts_query__cursor_copy_state(TSQueryCursor *, const QueryState *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut new_state: *mut QueryState = &mut *(*self_0).states.contents.offset(
         (*self_0)
             .states

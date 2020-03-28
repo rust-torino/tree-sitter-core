@@ -422,16 +422,7 @@ pub unsafe extern "C" fn ts_subtree_set_symbol(
 ) {
     let mut metadata: TSSymbolMetadata = ts_language_symbol_metadata(language, symbol);
     if (*self_0).data.is_inline() {
-        if (symbol as libc::c_int) < 255 as libc::c_int {
-        } else {
-            __assert_fail(b"symbol < UINT8_MAX\x00" as *const u8 as
-                              *const libc::c_char,
-                          b"lib/src/subtree.c\x00" as *const u8 as
-                              *const libc::c_char,
-                          224 as libc::c_int as libc::c_uint,
-                          (*::std::mem::transmute::<&[u8; 75],
-                                                    &[libc::c_char; 75]>(b"void ts_subtree_set_symbol(MutableSubtree *, TSSymbol, const TSLanguage *)\x00")).as_ptr());
-        }
+        assert!((symbol as libc::c_int) < 255 as libc::c_int);
         (*self_0).data.symbol = symbol as uint8_t;
         (*self_0).data.set_named(metadata.named());
         (*self_0).data.set_visible(metadata.visible())
@@ -722,16 +713,7 @@ pub unsafe extern "C" fn ts_subtree_set_children(
     mut child_count: uint32_t,
     mut language: *const TSLanguage,
 ) {
-    if !self_0.data.is_inline() {
-    } else {
-        __assert_fail(b"!self.data.is_inline\x00" as *const u8 as
-                          *const libc::c_char,
-                      b"lib/src/subtree.c\x00" as *const u8 as
-                          *const libc::c_char,
-                      347 as libc::c_int as libc::c_uint,
-                      (*::std::mem::transmute::<&[u8; 86],
-                                                &[libc::c_char; 86]>(b"void ts_subtree_set_children(MutableSubtree, Subtree *, uint32_t, const TSLanguage *)\x00")).as_ptr());
-    }
+    assert!(!self_0.data.is_inline());
     if (*self_0.ptr).child_count > 0 as libc::c_int as libc::c_uint
         && children != (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.children
     {
@@ -1112,31 +1094,9 @@ pub unsafe extern "C" fn ts_subtree_retain(mut self_0: Subtree) {
     if self_0.data.is_inline() {
         return;
     }
-    if (*self_0.ptr).ref_count > 0 as libc::c_int as libc::c_uint {
-    } else {
-        __assert_fail(
-            b"self.ptr->ref_count > 0\x00" as *const u8 as *const libc::c_char,
-            b"lib/src/subtree.c\x00" as *const u8 as *const libc::c_char,
-            509 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 32], &[libc::c_char; 32]>(
-                b"void ts_subtree_retain(Subtree)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    assert!((*self_0.ptr).ref_count > 0 as libc::c_int as libc::c_uint);
     atomic_inc(&(*self_0.ptr).ref_count as *const uint32_t as *mut uint32_t);
-    if (*self_0.ptr).ref_count != 0 as libc::c_int as libc::c_uint {
-    } else {
-        __assert_fail(
-            b"self.ptr->ref_count != 0\x00" as *const u8 as *const libc::c_char,
-            b"lib/src/subtree.c\x00" as *const u8 as *const libc::c_char,
-            511 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 32], &[libc::c_char; 32]>(
-                b"void ts_subtree_retain(Subtree)\x00",
-            ))
-            .as_ptr(),
-        );
-    };
+    assert!((*self_0.ptr).ref_count != 0 as libc::c_int as libc::c_uint);
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_subtree_release(mut pool: *mut SubtreePool, mut self_0: Subtree) {
@@ -1144,18 +1104,7 @@ pub unsafe extern "C" fn ts_subtree_release(mut pool: *mut SubtreePool, mut self
         return;
     }
     (*pool).tree_stack.size = 0 as libc::c_int as uint32_t;
-    if (*self_0.ptr).ref_count > 0 as libc::c_int as libc::c_uint {
-    } else {
-        __assert_fail(
-            b"self.ptr->ref_count > 0\x00" as *const u8 as *const libc::c_char,
-            b"lib/src/subtree.c\x00" as *const u8 as *const libc::c_char,
-            518 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 48], &[libc::c_char; 48]>(
-                b"void ts_subtree_release(SubtreePool *, Subtree)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    assert!((*self_0.ptr).ref_count > 0 as libc::c_int as libc::c_uint);
     if atomic_dec(&(*self_0.ptr).ref_count as *const uint32_t as *mut uint32_t)
         == 0 as libc::c_int as libc::c_uint
     {
@@ -1183,18 +1132,7 @@ pub unsafe extern "C" fn ts_subtree_release(mut pool: *mut SubtreePool, mut self
                     .children
                     .offset(i as isize);
                 if !child.data.is_inline() {
-                    if (*child.ptr).ref_count > 0 as libc::c_int as libc::c_uint {
-                    } else {
-                        __assert_fail(
-                            b"child.ptr->ref_count > 0\x00" as *const u8 as *const libc::c_char,
-                            b"lib/src/subtree.c\x00" as *const u8 as *const libc::c_char,
-                            529 as libc::c_int as libc::c_uint,
-                            (*::std::mem::transmute::<&[u8; 48], &[libc::c_char; 48]>(
-                                b"void ts_subtree_release(SubtreePool *, Subtree)\x00",
-                            ))
-                            .as_ptr(),
-                        );
-                    }
+                    assert!((*child.ptr).ref_count > 0 as libc::c_int as libc::c_uint);
                     if atomic_dec(&(*child.ptr).ref_count as *const uint32_t as *mut uint32_t)
                         == 0 as libc::c_int as libc::c_uint
                     {
