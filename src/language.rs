@@ -38,7 +38,7 @@ pub unsafe extern "C" fn ts_language_table_entry(
     {
         (*result).action_count = 0 as libc::c_int as uint32_t;
         (*result).is_reusable = 0 as libc::c_int != 0;
-        (*result).actions = 0 as *const TSParseAction
+        (*result).actions = std::ptr::null::<TSParseAction>()
     } else {
         if (symbol as libc::c_uint) < (*self_0).token_count {
         } else {

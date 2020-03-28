@@ -167,7 +167,7 @@ unsafe extern "C" fn ts_lexer__advance(mut _self: *mut TSLexer, mut skip: bool) 
                     .wrapping_add((*self_0).lookahead_size) as uint32_t as uint32_t
         }
     }
-    let mut current_range: *const TSRange = 0 as *const TSRange;
+    let mut current_range: *const TSRange = std::ptr::null::<TSRange>();
     if (*self_0).current_included_range_index < (*self_0).included_range_count {
         current_range = &mut *(*self_0)
             .included_ranges
@@ -186,7 +186,7 @@ unsafe extern "C" fn ts_lexer__advance(mut _self: *mut TSLexer, mut skip: bool) 
                     init
                 }
             } else {
-                current_range = 0 as *const TSRange
+                current_range = std::ptr::null::<TSRange>()
             }
         }
     }
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn ts_lexer_init(mut self_0: *mut Lexer) {
                 bytes: 0,
                 extent: TSPoint { row: 0, column: 0 },
             },
-            included_ranges: 0 as *mut TSRange,
+            included_ranges: std::ptr::null_mut::<TSRange>(),
             included_range_count: 0 as libc::c_int as size_t,
             current_included_range_index: 0 as libc::c_int as size_t,
             chunk: 0 as *const libc::c_char,
@@ -336,7 +336,11 @@ pub unsafe extern "C" fn ts_lexer_init(mut self_0: *mut Lexer) {
         };
         init
     };
-    ts_lexer_set_included_ranges(self_0, 0 as *const TSRange, 0 as libc::c_int as uint32_t);
+    ts_lexer_set_included_ranges(
+        self_0,
+        std::ptr::null::<TSRange>(),
+        0 as libc::c_int as uint32_t,
+    );
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_lexer_delete(mut self_0: *mut Lexer) {

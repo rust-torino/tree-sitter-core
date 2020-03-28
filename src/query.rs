@@ -274,7 +274,7 @@ unsafe extern "C" fn capture_list_pool_new() -> CaptureListPool {
         let mut init = CaptureListPool {
             list: {
                 let mut init = TSQueryCaptureArray {
-                    contents: 0 as *mut TSQueryCapture,
+                    contents: std::ptr::null_mut::<TSQueryCapture>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -350,7 +350,7 @@ unsafe extern "C" fn symbol_table_new() -> SymbolTable {
             },
             slices: {
                 let mut init = SymbolTableSlices {
-                    contents: 0 as *mut Slice,
+                    contents: std::ptr::null_mut::<Slice>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1217,9 +1217,9 @@ pub unsafe extern "C" fn ts_query_new(
     mut error_offset: *mut uint32_t,
     mut error_type: *mut TSQueryError,
 ) -> *mut TSQuery {
-    let mut symbol_map: *mut TSSymbol = 0 as *mut TSSymbol;
+    let mut symbol_map: *mut TSSymbol = std::ptr::null_mut::<TSSymbol>();
     if ts_language_version(language) >= 11 as libc::c_int as libc::c_uint {
-        symbol_map = 0 as *mut TSSymbol
+        symbol_map = std::ptr::null_mut::<TSSymbol>()
     } else {
         // Work around the fact that multiple symbols can currently be
         // associated with the same name, due to "simple aliases".
@@ -1258,7 +1258,7 @@ pub unsafe extern "C" fn ts_query_new(
             predicate_values: symbol_table_new(),
             steps: {
                 let mut init = TSQuerySteps {
-                    contents: 0 as *mut QueryStep,
+                    contents: std::ptr::null_mut::<QueryStep>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1266,7 +1266,7 @@ pub unsafe extern "C" fn ts_query_new(
             },
             pattern_map: {
                 let mut init = TSQueryPatternMap {
-                    contents: 0 as *mut PatternEntry,
+                    contents: std::ptr::null_mut::<PatternEntry>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1274,7 +1274,7 @@ pub unsafe extern "C" fn ts_query_new(
             },
             predicate_steps: {
                 let mut init = TSQueryPredicateSteps {
-                    contents: 0 as *mut TSQueryPredicateStep,
+                    contents: std::ptr::null_mut::<TSQueryPredicateStep>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1282,14 +1282,14 @@ pub unsafe extern "C" fn ts_query_new(
             },
             predicates_by_pattern: {
                 let mut init = TSQueryPredicatesByPattern {
-                    contents: 0 as *mut Slice,
+                    contents: std::ptr::null_mut::<Slice>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
                 init
             },
             start_bytes_by_pattern: TSQueryStartBytesByPattern {
-                contents: 0 as *mut uint32_t,
+                contents: std::ptr::null_mut::<uint32_t>(),
                 size: 0,
                 capacity: 0,
             },
@@ -1363,7 +1363,7 @@ pub unsafe extern "C" fn ts_query_new(
         if *error_type as u64 != 0 {
             *error_offset = stream.input.wrapping_offset_from_(source) as libc::c_long as uint32_t;
             ts_query_delete(self_0);
-            return 0 as *mut TSQuery;
+            return std::ptr::null_mut::<TSQuery>();
         }
         // Maintain a map that can look up patterns for a given root symbol.
         ts_query__pattern_map_insert(
@@ -1515,7 +1515,7 @@ pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
         ts_malloc(::std::mem::size_of::<TSQueryCursor>() as libc::c_ulong) as *mut TSQueryCursor;
     *self_0 = {
         let mut init = TSQueryCursor {
-            query: 0 as *const TSQuery,
+            query: std::ptr::null::<TSQuery>(),
             cursor: TSTreeCursor {
                 tree: 0 as *const libc::c_void,
                 id: 0 as *const libc::c_void,
@@ -1523,7 +1523,7 @@ pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
             },
             states: {
                 let mut init = TSQueryCursorStates {
-                    contents: 0 as *mut QueryState,
+                    contents: std::ptr::null_mut::<QueryState>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1531,7 +1531,7 @@ pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
             },
             finished_states: {
                 let mut init = TsQueryCursorFinishedStated {
-                    contents: 0 as *mut QueryState,
+                    contents: std::ptr::null_mut::<QueryState>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1728,7 +1728,7 @@ unsafe extern "C" fn ts_query__cursor_copy_state(
     let mut new_list_id: uint32_t =
         capture_list_pool_acquire(&mut (*self_0).capture_list_pool) as uint32_t;
     if new_list_id == NONE as libc::c_uint {
-        return 0 as *mut QueryState;
+        return std::ptr::null_mut::<QueryState>();
     }
     array__grow(
         &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,

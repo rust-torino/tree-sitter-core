@@ -600,10 +600,10 @@ unsafe extern "C" fn iterator_compare(
     mut new_iter: *const Iterator_0,
 ) -> IteratorComparison {
     let mut old_tree: Subtree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     let mut new_tree: Subtree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     let mut old_start: uint32_t = 0 as libc::c_int as uint32_t;
     let mut new_start: uint32_t = 0 as libc::c_int as uint32_t;
@@ -660,7 +660,7 @@ pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
 ) -> libc::c_uint {
     let mut results: TSRangeArray = {
         let mut init = TSRangeArray {
-            contents: 0 as *mut TSRange,
+            contents: std::ptr::null_mut::<TSRange>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };

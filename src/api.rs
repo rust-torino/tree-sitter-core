@@ -793,7 +793,7 @@ pub unsafe extern "C" fn ts_language_alias_sequence(
                 as isize,
         )
     } else {
-        0 as *const TSSymbol
+        std::ptr::null::<TSSymbol>()
     };
 }
 #[inline]
@@ -806,8 +806,8 @@ pub unsafe extern "C" fn ts_language_field_map(
     if (*self_0).version < 10 as libc::c_int as libc::c_uint
         || (*self_0).field_count == 0 as libc::c_int as libc::c_uint
     {
-        *start = 0 as *const TSFieldMapEntry;
-        *end = 0 as *const TSFieldMapEntry;
+        *start = std::ptr::null::<TSFieldMapEntry>();
+        *end = std::ptr::null::<TSFieldMapEntry>();
         return;
     }
     let mut slice: TSFieldMapSlice = *(*self_0).field_map_slices.offset(production_id as isize);
@@ -1360,7 +1360,7 @@ pub unsafe extern "C" fn ts_language_actions(
     mut count: *mut uint32_t,
 ) -> *const TSParseAction {
     let mut entry: TableEntry = TableEntry {
-        actions: 0 as *const TSParseAction,
+        actions: std::ptr::null::<TSParseAction>(),
         action_count: 0,
         is_reusable: false,
     };
@@ -1375,7 +1375,7 @@ pub unsafe extern "C" fn ts_language_has_actions(
     mut symbol: TSSymbol,
 ) -> bool {
     let mut entry: TableEntry = TableEntry {
-        actions: 0 as *const TSParseAction,
+        actions: std::ptr::null::<TSParseAction>(),
         action_count: 0,
         is_reusable: false,
     };
@@ -1389,7 +1389,7 @@ pub unsafe extern "C" fn ts_language_has_reduce_action(
     mut symbol: TSSymbol,
 ) -> bool {
     let mut entry: TableEntry = TableEntry {
-        actions: 0 as *const TSParseAction,
+        actions: std::ptr::null::<TSParseAction>(),
         action_count: 0,
         is_reusable: false,
     };
@@ -1480,7 +1480,7 @@ pub unsafe extern "C" fn ts_language_enabled_external_tokens(
     mut external_scanner_state: libc::c_uint,
 ) -> *const bool {
     if external_scanner_state == 0 as libc::c_int as libc::c_uint {
-        return 0 as *const bool;
+        return std::ptr::null::<bool>();
     } else {
         return (*self_0).external_scanner.states.offset(
             (*self_0)

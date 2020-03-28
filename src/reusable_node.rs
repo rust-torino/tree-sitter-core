@@ -27,14 +27,14 @@ pub unsafe extern "C" fn reusable_node_new() -> ReusableNode {
         let mut init = ReusableNode {
             stack: {
                 let mut init = StackEntryArray {
-                    contents: 0 as *mut StackEntry,
+                    contents: std::ptr::null_mut::<StackEntry>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
                 init
             },
             last_external_token: Subtree {
-                ptr: 0 as *const SubtreeHeapData,
+                ptr: std::ptr::null::<SubtreeHeapData>(),
             },
         };
         init
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn reusable_node_new() -> ReusableNode {
 pub unsafe extern "C" fn reusable_node_clear(mut self_0: *mut ReusableNode) {
     (*self_0).stack.size = 0 as libc::c_int as uint32_t;
     (*self_0).last_external_token = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
 }
 #[inline]
@@ -78,7 +78,7 @@ pub unsafe extern "C" fn reusable_node_tree(mut self_0: *mut ReusableNode) -> Su
         .tree
     } else {
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         }
     };
 }

@@ -184,7 +184,7 @@ unsafe extern "C" fn stack_node_release(
         if (*self_0).ref_count > 0 as libc::c_int as libc::c_uint {
             return;
         }
-        let mut first_predecessor: *mut StackNode = 0 as *mut StackNode;
+        let mut first_predecessor: *mut StackNode = std::ptr::null_mut::<StackNode>();
         if (*self_0).link_count as libc::c_int > 0 as libc::c_int {
             let mut i: libc::c_uint =
                 ((*self_0).link_count as libc::c_int - 1 as libc::c_int) as libc::c_uint;
@@ -242,7 +242,7 @@ unsafe extern "C" fn stack_node_new(
                 extent: TSPoint { row: 0, column: 0 },
             },
             links: [StackLink {
-                node: 0 as *mut StackNode,
+                node: std::ptr::null_mut::<StackNode>(),
                 subtree: Subtree {
                     data: SubtreeInlineData {
                         is_inline_visible_named_extra_has_changes_is_missing_is_keyword: [0; 1],
@@ -409,7 +409,7 @@ unsafe extern "C" fn ts_stack__add_version(
             node: node,
             last_external_token: (*(*self_0).heads.contents.offset(original_version as isize))
                 .last_external_token,
-            summary: 0 as *mut StackSummary,
+            summary: std::ptr::null_mut::<StackSummary>(),
             node_count_at_last_error: (*(*self_0).heads.contents.offset(original_version as isize))
                 .node_count_at_last_error,
             lookahead_when_paused: 0 as libc::c_int as TSSymbol,
@@ -510,7 +510,7 @@ unsafe extern "C" fn stack__iter(
             node: (*head).node,
             subtrees: {
                 let mut init = SubtreeArray {
-                    contents: 0 as *mut Subtree,
+                    contents: std::ptr::null_mut::<Subtree>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -574,9 +574,10 @@ unsafe extern "C" fn stack__iter(
                 let mut current_block_39: u64;
                 let mut j: uint32_t = 1 as libc::c_int as uint32_t;
                 while j <= (*node).link_count as libc::c_uint {
-                    let mut next_iterator: *mut StackIterator = 0 as *mut StackIterator;
+                    let mut next_iterator: *mut StackIterator =
+                        std::ptr::null_mut::<StackIterator>();
                     let mut link: StackLink = StackLink {
-                        node: 0 as *mut StackNode,
+                        node: std::ptr::null_mut::<StackNode>(),
                         subtree: Subtree {
                             data: SubtreeInlineData {
                                 is_inline_visible_named_extra_has_changes_is_missing_is_keyword: [0;
@@ -695,7 +696,7 @@ pub unsafe extern "C" fn ts_stack_new(mut subtree_pool: *mut SubtreePool) -> *mu
     (*self_0).slices.contents = 0 as *mut StackSlice;
     (*self_0).iterators.size = 0 as libc::c_int as uint32_t;
     (*self_0).iterators.capacity = 0 as libc::c_int as uint32_t;
-    (*self_0).iterators.contents = 0 as *mut StackIterator;
+    (*self_0).iterators.contents = std::ptr::null_mut::<StackIterator>();
     (*self_0).node_pool.size = 0 as libc::c_int as uint32_t;
     (*self_0).node_pool.capacity = 0 as libc::c_int as uint32_t;
     (*self_0).node_pool.contents = 0 as *mut *mut StackNode;
@@ -721,9 +722,9 @@ pub unsafe extern "C" fn ts_stack_new(mut subtree_pool: *mut SubtreePool) -> *mu
     );
     (*self_0).subtree_pool = subtree_pool;
     (*self_0).base_node = stack_node_new(
-        0 as *mut StackNode,
+        std::ptr::null_mut::<StackNode>(),
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
         0 as libc::c_int != 0,
         1 as libc::c_int as TSStateId,
@@ -1177,7 +1178,7 @@ pub unsafe extern "C" fn ts_stack_pop_error(
     }
     return {
         let mut init = SubtreeArray {
-            contents: 0 as *mut Subtree,
+            contents: std::ptr::null_mut::<Subtree>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0,
         };
@@ -1274,7 +1275,7 @@ pub unsafe extern "C" fn ts_stack_record_summary(
     };
     (*session.summary).size = 0 as libc::c_int as uint32_t;
     (*session.summary).capacity = 0 as libc::c_int as uint32_t;
-    (*session.summary).contents = 0 as *mut StackSummaryEntry;
+    (*session.summary).contents = std::ptr::null_mut::<StackSummaryEntry>();
     stack__iter(
         self_0,
         version,
@@ -1444,7 +1445,7 @@ pub unsafe extern "C" fn ts_stack_renumber_version(
         &mut *(*self_0).heads.contents.offset(v2 as isize) as *mut StackHead;
     if !(*target_head).summary.is_null() && (*source_head).summary.is_null() {
         (*source_head).summary = (*target_head).summary;
-        (*target_head).summary = 0 as *mut StackSummary
+        (*target_head).summary = std::ptr::null_mut::<StackSummary>()
     }
     stack_head_delete(
         target_head,
@@ -1522,7 +1523,7 @@ pub unsafe extern "C" fn ts_stack_copy_version(
     if !(*head).last_external_token.ptr.is_null() {
         ts_subtree_retain((*head).last_external_token);
     }
-    (*head).summary = 0 as *mut StackSummary;
+    (*head).summary = std::ptr::null_mut::<StackSummary>();
     return (*self_0)
         .heads
         .size
@@ -1744,9 +1745,9 @@ pub unsafe extern "C" fn ts_stack_clear(mut self_0: *mut Stack) {
         let mut init = StackHead {
             node: (*self_0).base_node,
             last_external_token: Subtree {
-                ptr: 0 as *const SubtreeHeapData,
+                ptr: std::ptr::null::<SubtreeHeapData>(),
             },
-            summary: 0 as *mut StackSummary,
+            summary: std::ptr::null_mut::<StackSummary>(),
             node_count_at_last_error: 0,
             lookahead_when_paused: 0 as libc::c_int as TSSymbol,
             status: StackStatusActive,
@@ -1845,7 +1846,7 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
                 let mut init = StackIterator {
                     node: (*head).node,
                     subtrees: SubtreeArray {
-                        contents: 0 as *mut Subtree,
+                        contents: std::ptr::null_mut::<Subtree>(),
                         size: 0,
                         capacity: 0,
                     },
@@ -1867,7 +1868,7 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
             let mut j_0: uint32_t = 0 as libc::c_int as uint32_t;
             while j_0 < visited_nodes.size {
                 if *visited_nodes.contents.offset(j_0 as isize) == node {
-                    node = 0 as *mut StackNode;
+                    node = std::ptr::null_mut::<StackNode>();
                     break;
                 } else {
                     j_0 = j_0.wrapping_add(1)
@@ -1968,7 +1969,8 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
                         );
                     }
                     fprintf(f, b"];\n\x00" as *const u8 as *const libc::c_char);
-                    let mut next_iterator: *mut StackIterator = 0 as *mut StackIterator;
+                    let mut next_iterator: *mut StackIterator =
+                        std::ptr::null_mut::<StackIterator>();
                     if j_1 == 0 as libc::c_int {
                         next_iterator = &mut *(*self_0).iterators.contents.offset(i_0 as isize)
                             as *mut StackIterator
