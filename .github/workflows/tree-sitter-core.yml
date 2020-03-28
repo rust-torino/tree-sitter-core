@@ -132,12 +132,16 @@ jobs:
 #        path-to-lcov: ${{ steps.coverage.outputs.report }}
 
 
-  cargo-c:
+  ubuntu-tests:
+
+    strategy:
+      matrix:
+        conf: [tests, cargo-c]
 
     env:
       RUST_BACKTRACE: 1
       RUSTC_WRAPPER: sccache
-      SCCACHE_CACHE_SIZE: 300M
+      SCCACHE_CACHE_SIZE: 1.3G
       SCCACHE_DIR: /home/runner/.cache/sccache
       SCCACHE_IDLE_TIMEOUT: 0
 
@@ -165,6 +169,7 @@ jobs:
         override: true
 
     - name: Generate Cargo.lock
+      if: matrix.conf == 'cargo-c'
       run: |
         cargo update
 
@@ -184,15 +189,36 @@ jobs:
         restore-keys: |
           sccache-
 
+    - name: Cache data tests
+      if: matrix.conf != 'cargo-c'
+      uses: actions/cache@v1
+      with:
+        path: tree-sitter-tests/data
+        key: data-${{ hashFiles('**/Cargo.*') }}
+        restore-keys: |
+          data-
+
     - name: Start sccache server
       run: |
         sccache --start-server
 
+    - name: Run no-default-features tests
+      if: matrix.conf != 'cargo-c'
+      run: |
+        cargo test --all --no-default-features
+
+    - name: Run all-features tests
+      if: matrix.conf != 'cargo-c'
+      run: |
+        cargo test --all --all-features
+
     - name: Install cargo-c
+      if: matrix.conf == 'cargo-c'
       run: |
         cargo install cargo-c
 
     - name: Run cargo-c
+      if: matrix.conf == 'cargo-c'
       run: |
         cargo cinstall --destdir=$HOME/tree-sitter-core
 
@@ -200,16 +226,58 @@ jobs:
       run: |
         sccache --stop-server
 
-  tests:
+  macos-tests:
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
+    env:
+      RUST_BACKTRACE: 1
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 1.3G
+      SCCACHE_DIR: /Users/runner/Library/Caches/Mozilla.sccache
+      SCCACHE_IDLE_TIMEOUT: 0
 
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install sccache
+      run: |
+        brew install sccache
+
+    - name: Install stable
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/cache
+        key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          cargo-registry-
+
+    - name: Cache sccache output
+      uses: actions/cache@v1
+      with:
+        path: /Users/runner/Library/Caches/Mozilla.sccache
+        key: sccache-${{ hashFiles('**/Cargo.*') }}
+        restore-keys: |
+          sccache-
+
+    - name: Cache data tests
+      uses: actions/cache@v1
+      with:
+        path: tree-sitter-tests/data
+        key: data-${{ hashFiles('**/Cargo.*') }}
+        restore-keys: |
+          data-
+
+    - name: Start sccache server
+      run: |
+        sccache --start-server
 
     - name: Run no-default-features tests
       run: |
@@ -218,3 +286,7 @@ jobs:
     - name: Run all-features tests
       run: |
         cargo test --all --all-features
+
+    - name: Stop sccache server
+      run: |
+        sccache --stop-server
