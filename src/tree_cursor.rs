@@ -31,11 +31,12 @@ pub struct CursorChildIterator {
 unsafe extern "C" fn ts_tree_cursor_iterate_children(
     mut self_0: *const TreeCursor,
 ) -> CursorChildIterator {
-    assert!((*self_0)
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).stack.size
+    assert!(
+        (*self_0)
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).stack.size
     );
     let mut last_entry: *mut TreeCursorEntry = &mut *(*self_0).stack.contents.offset(
         (*self_0)
@@ -394,11 +395,12 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_current_node(mut _self: *const TSTreeCursor) -> TSNode {
     let mut self_0: *const TreeCursor = _self as *const TreeCursor;
-    assert!((*self_0)
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).stack.size
+    assert!(
+        (*self_0)
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).stack.size
     );
     let mut last_entry: *mut TreeCursorEntry = &mut *(*self_0).stack.contents.offset(
         (*self_0)

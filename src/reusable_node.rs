@@ -102,11 +102,12 @@ pub unsafe extern "C" fn reusable_node_delete(mut self_0: *mut ReusableNode) {
 }
 #[inline]
 pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
-    assert!((*self_0)
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).stack.size
+    assert!(
+        (*self_0)
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).stack.size
     );
     let mut last_entry: StackEntry = *(&mut *(*self_0).stack.contents.offset(
         (*self_0)
@@ -144,11 +145,12 @@ pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
         if (*self_0).stack.size == 0 as libc::c_int as libc::c_uint {
             return;
         }
-        assert!((*self_0)
-            .stack
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-            < (*self_0).stack.size
+        assert!(
+            (*self_0)
+                .stack
+                .size
+                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                < (*self_0).stack.size
         );
         tree = (*(&mut *(*self_0).stack.contents.offset(
             (*self_0)
@@ -183,11 +185,12 @@ pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
 }
 #[inline]
 pub unsafe extern "C" fn reusable_node_descend(mut self_0: *mut ReusableNode) -> bool {
-    assert!((*self_0)
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).stack.size
+    assert!(
+        (*self_0)
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).stack.size
     );
     let mut last_entry: StackEntry = *(&mut *(*self_0).stack.contents.offset(
         (*self_0)

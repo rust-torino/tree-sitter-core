@@ -741,11 +741,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
         if (*stream).next == ')' as i32 {
             stream_advance(stream);
             stream_skip_whitespace(stream);
-            assert!((*self_0)
-                .predicates_by_pattern
-                .size
-                .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                < (*self_0).predicates_by_pattern.size
+            assert!(
+                (*self_0)
+                    .predicates_by_pattern
+                    .size
+                    .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                    < (*self_0).predicates_by_pattern.size
             );
             let ref mut fresh3 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                 (*self_0)
@@ -789,11 +790,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     stream_reset(stream, capture_name);
                     return TSQueryErrorCapture;
                 }
-                assert!((*self_0)
-                    .predicates_by_pattern
-                    .size
-                    .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                    < (*self_0).predicates_by_pattern.size
+                assert!(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                        < (*self_0).predicates_by_pattern.size
                 );
                 let ref mut fresh5 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
@@ -854,11 +856,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     string_content,
                     length_0,
                 );
-                assert!((*self_0)
-                    .predicates_by_pattern
-                    .size
-                    .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                    < (*self_0).predicates_by_pattern.size
+                assert!(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                        < (*self_0).predicates_by_pattern.size
                 );
                 let ref mut fresh7 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
@@ -897,11 +900,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     symbol_start,
                     length_1,
                 );
-                assert!((*self_0)
-                    .predicates_by_pattern
-                    .size
-                    .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                    < (*self_0).predicates_by_pattern.size
+                assert!(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                        < (*self_0).predicates_by_pattern.size
                 );
                 let ref mut fresh9 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
                     (*self_0)
@@ -1702,11 +1706,12 @@ unsafe extern "C" fn ts_query__cursor_copy_state(
     let fresh19 = (*self_0).states.size;
     (*self_0).states.size = (*self_0).states.size.wrapping_add(1);
     *(*self_0).states.contents.offset(fresh19 as isize) = *state;
-    assert!((*self_0)
-        .states
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).states.size
+    assert!(
+        (*self_0)
+            .states
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).states.size
     );
     let mut new_state: *mut QueryState = &mut *(*self_0).states.contents.offset(
         (*self_0)

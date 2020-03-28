@@ -568,11 +568,12 @@ unsafe extern "C" fn stack__iter(
                         let fresh6 = (*self_0).iterators.size;
                         (*self_0).iterators.size = (*self_0).iterators.size.wrapping_add(1);
                         *(*self_0).iterators.contents.offset(fresh6 as isize) = current_iterator;
-                        assert!((*self_0)
-                            .iterators
-                            .size
-                            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                            < (*self_0).iterators.size
+                        assert!(
+                            (*self_0)
+                                .iterators
+                                .size
+                                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                                < (*self_0).iterators.size
                         );
                         next_iterator = &mut *(*self_0).iterators.contents.offset(
                             (*self_0)
@@ -1269,11 +1270,12 @@ pub unsafe extern "C" fn ts_stack_copy_version(
     (*self_0).heads.size = (*self_0).heads.size.wrapping_add(1);
     *(*self_0).heads.contents.offset(fresh10 as isize) =
         *(*self_0).heads.contents.offset(version as isize);
-    assert!((*self_0)
-        .heads
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).heads.size
+    assert!(
+        (*self_0)
+            .heads
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).heads.size
     );
     let mut head: *mut StackHead = &mut *(*self_0).heads.contents.offset(
         (*self_0)
@@ -1667,11 +1669,12 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
                         let fresh13 = (*self_0).iterators.size;
                         (*self_0).iterators.size = (*self_0).iterators.size.wrapping_add(1);
                         *(*self_0).iterators.contents.offset(fresh13 as isize) = iterator;
-                        assert!((*self_0)
-                            .iterators
-                            .size
-                            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-                            < (*self_0).iterators.size
+                        assert!(
+                            (*self_0)
+                                .iterators
+                                .size
+                                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                                < (*self_0).iterators.size
                         );
                         next_iterator = &mut *(*self_0).iterators.contents.offset(
                             (*self_0)
