@@ -1581,9 +1581,7 @@ unsafe extern "C" fn ts_subtree__write_char_to_string(
         ) as size_t;
     } else if (0 as libc::c_int) < c
         && c < 128 as libc::c_int
-        && *(*__ctype_b_loc()).offset(c as isize) as libc::c_int
-            & _ISprint as libc::c_int as libc::c_ushort as libc::c_int
-            != 0
+        && ((c as u8).is_ascii_graphic() || c == ' ' as i32)
     {
         return snprintf(
             s,
