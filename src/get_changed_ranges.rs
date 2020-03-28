@@ -7,23 +7,11 @@ unsafe extern "C" fn ts_range_array_add(
     mut end: Length,
 ) {
     if (*self_0).size > 0 as libc::c_int as libc::c_uint {
-        if (*self_0)
+        assert!((*self_0)
             .size
             .wrapping_sub(1 as libc::c_int as libc::c_uint)
             < (*self_0).size
-        {
-        } else {
-            __assert_fail(
-                b"(uint32_t)(self)->size - 1 < (self)->size\x00" as *const u8
-                    as *const libc::c_char,
-                b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-                12 as libc::c_int as libc::c_uint,
-                (*::std::mem::transmute::<&[u8; 56], &[libc::c_char; 56]>(
-                    b"void ts_range_array_add(TSRangeArray *, Length, Length)\x00",
-                ))
-                .as_ptr(),
             );
-        }
         let mut last_range: *mut TSRange = &mut *(*self_0).contents.offset(
             (*self_0)
                 .size
@@ -210,25 +198,13 @@ unsafe extern "C" fn iterator_done(mut self_0: *mut Iterator_0) -> bool {
     return (*self_0).cursor.stack.size == 0 as libc::c_int as libc::c_uint;
 }
 unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Length {
-    if (*self_0)
+    assert!((*self_0)
         .cursor
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).cursor.stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                as *const u8 as *const libc::c_char,
-            b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-            126 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 43], &[libc::c_char; 43]>(
-                b"Length iterator_start_position(Iterator *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
             .cursor
@@ -243,25 +219,13 @@ unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Len
     };
 }
 unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Length {
-    if (*self_0)
+    assert!((*self_0)
         .cursor
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).cursor.stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                as *const u8 as *const libc::c_char,
-            b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-            135 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
-                b"Length iterator_end_position(Iterator *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
             .cursor
@@ -277,25 +241,13 @@ unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Lengt
     };
 }
 unsafe extern "C" fn iterator_tree_is_visible(mut self_0: *const Iterator_0) -> bool {
-    if (*self_0)
+    assert!((*self_0)
         .cursor
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).cursor.stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                as *const u8 as *const libc::c_char,
-            b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-            145 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 49], &[libc::c_char; 49]>(
-                b"_Bool iterator_tree_is_visible(const Iterator *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
             .cursor
@@ -377,25 +329,13 @@ unsafe extern "C" fn iterator_ascend(mut self_0: *mut Iterator_0) {
     if iterator_tree_is_visible(self_0) as libc::c_int != 0 && !(*self_0).in_padding {
         (*self_0).visible_depth = (*self_0).visible_depth.wrapping_sub(1)
     }
-    if (*self_0)
+    assert!((*self_0)
         .cursor
         .stack
         .size
         .wrapping_sub(1 as libc::c_int as libc::c_uint)
         < (*self_0).cursor.stack.size
-    {
-    } else {
-        __assert_fail(
-            b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                as *const u8 as *const libc::c_char,
-            b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-            192 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 33], &[libc::c_char; 33]>(
-                b"void iterator_ascend(Iterator *)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    );
     if (*(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
             .cursor
@@ -420,25 +360,13 @@ unsafe extern "C" fn iterator_descend(
     let mut did_descend: bool = false;
     loop {
         did_descend = 0 as libc::c_int != 0;
-        if (*self_0)
+        assert!((*self_0)
             .cursor
             .stack
             .size
             .wrapping_sub(1 as libc::c_int as libc::c_uint)
             < (*self_0).cursor.stack.size
-        {
-        } else {
-            __assert_fail(
-                b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                    as *const u8 as *const libc::c_char,
-                b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-                202 as libc::c_int as libc::c_uint,
-                (*::std::mem::transmute::<&[u8; 45], &[libc::c_char; 45]>(
-                    b"_Bool iterator_descend(Iterator *, uint32_t)\x00",
-                ))
-                .as_ptr(),
-            );
-        }
+        );
         let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
             (*self_0)
                 .cursor
@@ -522,25 +450,13 @@ unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
         if iterator_done(self_0) {
             return;
         }
-        if (*self_0)
+        assert!((*self_0)
             .cursor
             .stack
             .size
             .wrapping_sub(1 as libc::c_int as libc::c_uint)
             < (*self_0).cursor.stack.size
-        {
-        } else {
-            __assert_fail(
-                b"(uint32_t)(&self->cursor.stack)->size - 1 < (&self->cursor.stack)->size\x00"
-                    as *const u8 as *const libc::c_char,
-                b"lib/src/get_changed_ranges.c\x00" as *const u8 as *const libc::c_char,
-                255 as libc::c_int as libc::c_uint,
-                (*::std::mem::transmute::<&[u8; 34], &[libc::c_char; 34]>(
-                    b"void iterator_advance(Iterator *)\x00",
-                ))
-                .as_ptr(),
-            );
-        }
+        );
         let mut parent: *const Subtree = (*(&mut *(*self_0).cursor.stack.contents.offset(
             (*self_0)
                 .cursor

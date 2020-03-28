@@ -15,13 +15,6 @@ pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: usize = 9;
 
 extern "C" {
     #[no_mangle]
-    pub fn __assert_fail(
-        __assertion: *const libc::c_char,
-        __file: *const libc::c_char,
-        __line: libc::c_uint,
-        __function: *const libc::c_char,
-    ) -> !;
-    #[no_mangle]
     pub fn __ctype_b_loc() -> *mut *const libc::c_ushort;
     #[no_mangle]
     pub static mut stderr: *mut FILE;
@@ -884,16 +877,7 @@ pub unsafe extern "C" fn array__splice(
         .wrapping_sub(old_count);
     let mut old_end: uint32_t = index.wrapping_add(old_count);
     let mut new_end: uint32_t = index.wrapping_add(new_count);
-    if old_end <= (*self_0).size {
-    } else {
-        __assert_fail(b"old_end <= self->size\x00" as *const u8 as
-                          *const libc::c_char,
-                      b"lib/src/./array.h\x00" as *const u8 as
-                          *const libc::c_char,
-                      124 as libc::c_int as libc::c_uint,
-                      (*::std::mem::transmute::<&[u8; 84],
-                                                &[libc::c_char; 84]>(b"void array__splice(VoidArray *, size_t, uint32_t, uint32_t, uint32_t, const void *)\x00")).as_ptr());
-    }
+    assert!(old_end <= (*self_0).size);
     array__reserve(self_0, element_size, new_size);
     let mut contents: *mut libc::c_char = (*self_0).contents as *mut libc::c_char;
     if (*self_0).size > old_end {
@@ -1162,18 +1146,7 @@ pub unsafe extern "C" fn array__erase(
     mut element_size: size_t,
     mut index: uint32_t,
 ) {
-    if index < (*self_0).size {
-    } else {
-        __assert_fail(
-            b"index < self->size\x00" as *const u8 as *const libc::c_char,
-            b"lib/src/./array.h\x00" as *const u8 as *const libc::c_char,
-            84 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 49], &[libc::c_char; 49]>(
-                b"void array__erase(VoidArray *, size_t, uint32_t)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    assert!(index < (*self_0).size);
     let mut contents: *mut libc::c_char = (*self_0).contents as *mut libc::c_char;
     memmove(
         contents.offset((index as libc::c_ulong).wrapping_mul(element_size) as isize)
