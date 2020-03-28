@@ -434,7 +434,7 @@ unsafe extern "C" fn ts_parser__lex(
     let mut lex_mode: TSLexMode = *(*(*self_0).language).lex_modes.offset(parse_state as isize);
     if lex_mode.lex_state as libc::c_int == -(1 as libc::c_int) as uint16_t as libc::c_int {
         return Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         };
     }
     let mut valid_external_tokens: *const bool = ts_language_enabled_external_tokens(
@@ -720,7 +720,7 @@ unsafe extern "C" fn ts_parser__get_cached_token(
         }
     }
     return Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
 }
 unsafe extern "C" fn ts_parser__set_cached_token(
@@ -894,7 +894,7 @@ unsafe extern "C" fn ts_parser__reuse_node(
         }
     }
     return Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
 }
 unsafe extern "C" fn ts_parser__select_tree(
@@ -1258,7 +1258,7 @@ unsafe extern "C" fn ts_parser__accept(
     while i < pop.size {
         let mut trees: SubtreeArray = (*pop.contents.offset(i as isize)).subtrees;
         let mut root: Subtree = Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         };
         let mut j: uint32_t = trees.size.wrapping_sub(1 as libc::c_int as libc::c_uint);
         while j.wrapping_add(1 as libc::c_int as libc::c_uint) > 0 as libc::c_int as libc::c_uint {
@@ -1381,7 +1381,7 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
             let mut symbol: TSSymbol = first_symbol;
             while (symbol as libc::c_int) < end_symbol as libc::c_int {
                 let mut entry: TableEntry = TableEntry {
-                    actions: 0 as *const TSParseAction,
+                    actions: std::ptr::null::<TSParseAction>(),
                     action_count: 0,
                     is_reusable: false,
                 };
@@ -1554,7 +1554,7 @@ unsafe extern "C" fn ts_parser__handle_error(
             (*self_0).stack,
             v,
             Subtree {
-                ptr: 0 as *const SubtreeHeapData,
+                ptr: std::ptr::null::<SubtreeHeapData>(),
             },
             0 as libc::c_int != 0,
             0 as libc::c_int as TSStateId,
@@ -1851,7 +1851,7 @@ unsafe extern "C" fn ts_parser__recover(
         }
         let mut children: SubtreeArray = {
             let mut init = SubtreeArray {
-                contents: 0 as *mut Subtree,
+                contents: std::ptr::null_mut::<Subtree>(),
                 size: 0 as libc::c_int as uint32_t,
                 capacity: 0 as libc::c_int as uint32_t,
             };
@@ -1926,7 +1926,7 @@ unsafe extern "C" fn ts_parser__recover(
     }
     let mut children_0: SubtreeArray = {
         let mut init = SubtreeArray {
-            contents: 0 as *mut Subtree,
+            contents: std::ptr::null_mut::<Subtree>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };
@@ -2038,11 +2038,11 @@ unsafe extern "C" fn ts_parser__advance(
     let mut last_external_token: Subtree = ts_stack_last_external_token((*self_0).stack, version);
     let mut did_reuse: bool = 1 as libc::c_int != 0;
     let mut lookahead: Subtree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     let mut table_entry: TableEntry = {
         let mut init = TableEntry {
-            actions: 0 as *const TSParseAction,
+            actions: std::ptr::null::<TSParseAction>(),
             action_count: 0 as libc::c_int as uint32_t,
             is_reusable: false,
         };
@@ -2510,7 +2510,7 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
     (*self_0).tree_pool = ts_subtree_pool_new(32 as libc::c_int as uint32_t);
     (*self_0).stack = ts_stack_new(&mut (*self_0).tree_pool);
     (*self_0).finished_tree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     (*self_0).reusable_node = reusable_node_new();
     (*self_0).dot_graph_file = 0 as *mut FILE;
@@ -2519,12 +2519,12 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
     (*self_0).end_clock = clock_null();
     (*self_0).operation_count = 0 as libc::c_int as libc::c_uint;
     (*self_0).old_tree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     (*self_0).scratch_tree.ptr = &mut (*self_0).scratch_tree_data;
     (*self_0).included_range_differences = {
         let mut init = TSRangeArray {
-            contents: 0 as *mut TSRange,
+            contents: std::ptr::null_mut::<TSRange>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };
@@ -2535,10 +2535,10 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
         self_0,
         0 as libc::c_int as size_t,
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
     );
     return self_0;
@@ -2548,7 +2548,7 @@ pub unsafe extern "C" fn ts_parser_delete(mut self_0: *mut TSParser) {
     if self_0.is_null() {
         return;
     }
-    ts_parser_set_language(self_0, 0 as *const TSLanguage);
+    ts_parser_set_language(self_0, std::ptr::null::<TSLanguage>());
     ts_stack_delete((*self_0).stack);
     if !(*self_0).reduce_actions.contents.is_null() {
         array__delete(&mut (*self_0).reduce_actions as *mut ReduceActionSet as *mut VoidArray);
@@ -2561,7 +2561,7 @@ pub unsafe extern "C" fn ts_parser_delete(mut self_0: *mut TSParser) {
     if !(*self_0).old_tree.ptr.is_null() {
         ts_subtree_release(&mut (*self_0).tree_pool, (*self_0).old_tree);
         (*self_0).old_tree = Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         }
     }
     ts_lexer_delete(&mut (*self_0).lexer);
@@ -2569,10 +2569,10 @@ pub unsafe extern "C" fn ts_parser_delete(mut self_0: *mut TSParser) {
         self_0,
         0 as libc::c_int as size_t,
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
     );
     ts_subtree_pool_delete(&mut (*self_0).tree_pool);
@@ -2691,7 +2691,7 @@ pub unsafe extern "C" fn ts_parser_reset(mut self_0: *mut TSParser) {
     if !(*self_0).old_tree.ptr.is_null() {
         ts_subtree_release(&mut (*self_0).tree_pool, (*self_0).old_tree);
         (*self_0).old_tree = Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         }
     }
     reusable_node_clear(&mut (*self_0).reusable_node);
@@ -2701,16 +2701,16 @@ pub unsafe extern "C" fn ts_parser_reset(mut self_0: *mut TSParser) {
         self_0,
         0 as libc::c_int as size_t,
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
         Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         },
     );
     if !(*self_0).finished_tree.ptr.is_null() {
         ts_subtree_release(&mut (*self_0).tree_pool, (*self_0).finished_tree);
         (*self_0).finished_tree = Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         }
     }
     (*self_0).accept_count = 0 as libc::c_int as libc::c_uint;
@@ -2722,7 +2722,7 @@ pub unsafe extern "C" fn ts_parser_parse(
     mut input: TSInput,
 ) -> *mut TSTree {
     if (*self_0).language.is_null() || input.read.is_none() {
-        return 0 as *mut TSTree;
+        return std::ptr::null_mut::<TSTree>();
     }
     ts_lexer_set_input(&mut (*self_0).lexer, input);
     (*self_0).included_range_differences.size = 0 as libc::c_int as uint32_t;
@@ -2831,7 +2831,7 @@ pub unsafe extern "C" fn ts_parser_parse(
                     ts_parser__log(self_0);
                 }
                 if !ts_parser__advance(self_0, version, allow_node_reuse) {
-                    return 0 as *mut TSTree;
+                    return std::ptr::null_mut::<TSTree>();
                 }
                 if !(*self_0).dot_graph_file.is_null() {
                     ts_stack_print_dot_graph(
@@ -2909,7 +2909,7 @@ pub unsafe extern "C" fn ts_parser_parse(
         (*self_0).lexer.included_range_count as libc::c_uint,
     );
     (*self_0).finished_tree = Subtree {
-        ptr: 0 as *const SubtreeHeapData,
+        ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     ts_parser_reset(self_0);
     return result;

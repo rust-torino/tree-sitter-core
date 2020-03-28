@@ -15,7 +15,7 @@ pub unsafe extern "C" fn ts_tree_new(
         ts_malloc(::std::mem::size_of::<TSTree>() as libc::c_ulong) as *mut TSTree;
     (*result).root = root;
     (*result).language = language;
-    (*result).parent_cache = 0 as *mut ParentCacheEntry;
+    (*result).parent_cache = std::ptr::null_mut::<ParentCacheEntry>();
     (*result).parent_cache_start = 0 as libc::c_int as uint32_t;
     (*result).parent_cache_size = 0 as libc::c_int as uint32_t;
     (*result).included_ranges = ts_calloc(
@@ -130,10 +130,10 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
 ) -> *mut TSRange {
     let mut cursor1: TreeCursor = {
         let mut init = TreeCursor {
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
             stack: {
                 let mut init = TreeCursorEntryArray {
-                    contents: 0 as *mut TreeCursorEntry,
+                    contents: std::ptr::null_mut::<TreeCursorEntry>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -144,10 +144,10 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
     };
     let mut cursor2: TreeCursor = {
         let mut init = TreeCursor {
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
             stack: {
                 let mut init = TreeCursorEntryArray {
-                    contents: 0 as *mut TreeCursorEntry,
+                    contents: std::ptr::null_mut::<TreeCursorEntry>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
     ts_tree_cursor_init(&mut cursor2, ts_tree_root_node(other));
     let mut included_range_differences: TSRangeArray = {
         let mut init = TSRangeArray {
-            contents: 0 as *mut TSRange,
+            contents: std::ptr::null_mut::<TSRange>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
         (*other).included_range_count,
         &mut included_range_differences,
     );
-    let mut result: *mut TSRange = 0 as *mut TSRange;
+    let mut result: *mut TSRange = std::ptr::null_mut::<TSRange>();
     *count = ts_subtree_get_changed_ranges(
         &(*self_0).root,
         &(*other).root,
@@ -217,8 +217,8 @@ pub unsafe extern "C" fn ts_tree_get_cached_parent(
         i = i.wrapping_add(1)
     }
     return ts_node_new(
-        0 as *const TSTree,
-        0 as *const Subtree,
+        std::ptr::null::<TSTree>(),
+        std::ptr::null::<Subtree>(),
         length_zero(),
         0 as libc::c_int as TSSymbol,
     );

@@ -163,7 +163,7 @@ pub unsafe extern "C" fn ts_subtree_array_remove_trailing_extras(
 ) -> SubtreeArray {
     let mut result: SubtreeArray = {
         let mut init = SubtreeArray {
-            contents: 0 as *mut Subtree,
+            contents: std::ptr::null_mut::<Subtree>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn ts_subtree_pool_new(mut capacity: uint32_t) -> SubtreeP
         let mut init = SubtreePool {
             free_trees: {
                 let mut init = MutableSubtreeArray {
-                    contents: 0 as *mut MutableSubtree,
+                    contents: std::ptr::null_mut::<MutableSubtree>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn ts_subtree_pool_new(mut capacity: uint32_t) -> SubtreeP
             },
             tree_stack: {
                 let mut init = MutableSubtreeArray {
-                    contents: 0 as *mut MutableSubtree,
+                    contents: std::ptr::null_mut::<MutableSubtree>(),
                     size: 0 as libc::c_int as uint32_t,
                     capacity: 0 as libc::c_int as uint32_t,
                 };
@@ -1366,7 +1366,7 @@ pub unsafe extern "C" fn ts_subtree_edit(
 
     let mut stack: StackEntryArray = {
         let mut init = StackEntryArray {
-            contents: 0 as *mut LocStackEntry,
+            contents: std::ptr::null_mut::<LocStackEntry>(),
             size: 0 as libc::c_int as uint32_t,
             capacity: 0 as libc::c_int as uint32_t,
         };
@@ -1583,7 +1583,7 @@ pub unsafe extern "C" fn ts_subtree_edit(
 pub unsafe extern "C" fn ts_subtree_last_external_token(mut tree: Subtree) -> Subtree {
     if !ts_subtree_has_external_tokens(tree) {
         return Subtree {
-            ptr: 0 as *const SubtreeHeapData,
+            ptr: std::ptr::null::<SubtreeHeapData>(),
         };
     }
     while (*tree.ptr).child_count > 0 as libc::c_int as libc::c_uint {
@@ -1795,8 +1795,8 @@ unsafe extern "C" fn ts_subtree__write_to_string(
             language,
             (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.production_id as uint32_t,
         );
-        let mut field_map: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
-        let mut field_map_end: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
+        let mut field_map: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
+        let mut field_map_end: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
         ts_language_field_map(
             language,
             (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.production_id as uint32_t,

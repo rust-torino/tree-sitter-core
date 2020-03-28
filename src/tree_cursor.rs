@@ -59,13 +59,13 @@ unsafe extern "C" fn ts_tree_cursor_iterate_children(
         return {
             let mut init = CursorChildIterator {
                 parent: Subtree {
-                    ptr: 0 as *const SubtreeHeapData,
+                    ptr: std::ptr::null::<SubtreeHeapData>(),
                 },
                 tree: (*self_0).tree,
                 position: length_zero(),
                 child_index: 0 as libc::c_int as uint32_t,
                 structural_child_index: 0 as libc::c_int as uint32_t,
-                alias_sequence: 0 as *const TSSymbol,
+                alias_sequence: std::ptr::null::<TSSymbol>(),
             };
             init
         };
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeC
         did_descend = 0 as libc::c_int != 0;
         let mut visible: bool = false;
         let mut entry: TreeCursorEntry = TreeCursorEntry {
-            subtree: 0 as *const Subtree,
+            subtree: std::ptr::null::<Subtree>(),
             position: Length {
                 bytes: 0,
                 extent: TSPoint { row: 0, column: 0 },
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child_for_byte(
         did_descend = 0 as libc::c_int != 0;
         let mut visible: bool = false;
         let mut entry: TreeCursorEntry = TreeCursorEntry {
-            subtree: 0 as *const Subtree,
+            subtree: std::ptr::null::<Subtree>(),
             position: Length {
                 bytes: 0,
                 extent: TSPoint { row: 0, column: 0 },
@@ -513,8 +513,8 @@ pub unsafe extern "C" fn ts_tree_cursor_current_status(
         if ts_subtree_extra(*(*entry).subtree) {
             break;
         }
-        let mut field_map: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
-        let mut field_map_end: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
+        let mut field_map: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
+        let mut field_map_end: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
         ts_language_field_map(
             (*(*self_0).tree).language,
             (*(*(*parent_entry).subtree).ptr)
@@ -601,8 +601,8 @@ pub unsafe extern "C" fn ts_tree_cursor_current_field_id(
         if ts_subtree_extra(*(*entry).subtree) {
             break;
         }
-        let mut field_map: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
-        let mut field_map_end: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
+        let mut field_map: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
+        let mut field_map_end: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
         ts_language_field_map(
             (*(*self_0).tree).language,
             (*(*(*parent_entry).subtree).ptr)

@@ -36,8 +36,8 @@ pub unsafe extern "C" fn ts_node_new(
 #[inline]
 unsafe extern "C" fn ts_node__null() -> TSNode {
     return ts_node_new(
-        0 as *const TSTree,
-        0 as *const Subtree,
+        std::ptr::null::<TSTree>(),
+        std::ptr::null::<Subtree>(),
         length_zero(),
         0 as libc::c_int as TSSymbol,
     );
@@ -73,13 +73,13 @@ unsafe extern "C" fn ts_node_iterate_children(mut node: *const TSNode) -> NodeCh
         return {
             let mut init = NodeChildIterator {
                 parent: Subtree {
-                    ptr: 0 as *const SubtreeHeapData,
+                    ptr: std::ptr::null::<SubtreeHeapData>(),
                 },
                 tree: (*node).tree,
                 position: length_zero(),
                 child_index: 0 as libc::c_int as uint32_t,
                 structural_child_index: 0 as libc::c_int as uint32_t,
-                alias_sequence: 0 as *const TSSymbol,
+                alias_sequence: std::ptr::null::<TSSymbol>(),
             };
             init
         };
@@ -188,7 +188,7 @@ unsafe extern "C" fn ts_node__child(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut index: uint32_t = 0 as libc::c_int as uint32_t;
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut result);
@@ -260,7 +260,7 @@ unsafe extern "C" fn ts_node__prev_sibling(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -324,7 +324,7 @@ unsafe extern "C" fn ts_node__next_sibling(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -383,7 +383,7 @@ unsafe extern "C" fn ts_node__first_child_for_byte(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -419,7 +419,7 @@ unsafe extern "C" fn ts_node__descendant_for_byte_range(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -463,7 +463,7 @@ unsafe extern "C" fn ts_node__descendant_for_point_range(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -583,7 +583,7 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut node);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
@@ -624,8 +624,8 @@ pub unsafe extern "C" fn ts_node_child_by_field_id(
         if field_id == 0 || ts_node_child_count(self_0) == 0 as libc::c_int as libc::c_uint {
             return ts_node__null();
         }
-        let mut field_map: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
-        let mut field_map_end: *const TSFieldMapEntry = 0 as *const TSFieldMapEntry;
+        let mut field_map: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
+        let mut field_map_end: *const TSFieldMapEntry = std::ptr::null::<TSFieldMapEntry>();
         ts_language_field_map(
             (*self_0.tree).language,
             (*ts_node__subtree(self_0).ptr)
@@ -657,7 +657,7 @@ pub unsafe extern "C" fn ts_node_child_by_field_id(
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: 0 as *const libc::c_void,
-            tree: 0 as *const TSTree,
+            tree: std::ptr::null::<TSTree>(),
         };
         let mut iterator: NodeChildIterator = ts_node_iterate_children(&mut self_0);
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
