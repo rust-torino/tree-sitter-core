@@ -3,10 +3,7 @@ pub use crate::{
     subtree::*, tree::*, tree_cursor::*,
 };
 
-use libc::{
-    calloc, clock_gettime, exit, fprintf, free, malloc, memcpy, memmove, memset, realloc, timespec,
-    FILE,
-};
+use libc::{calloc, clock_gettime, free, malloc, memcpy, memmove, memset, realloc, timespec};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 pub const TREE_SITTER_LANGUAGE_VERSION: usize = 11;
@@ -14,8 +11,6 @@ pub const TREE_SITTER_LANGUAGE_VERSION: usize = 11;
 pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: usize = 9;
 
 extern "C" {
-    #[no_mangle]
-    pub static mut stderr: *mut FILE;
     #[no_mangle]
     pub fn iswspace(__wc: wint_t) -> libc::c_int;
     #[no_mangle]
@@ -585,12 +580,7 @@ pub struct TSTreeCursor {
 pub unsafe extern "C" fn ts_malloc(mut size: size_t) -> *mut libc::c_void {
     let mut result: *mut libc::c_void = malloc(size as usize);
     if size > 0 as libc::c_int as libc::c_ulong && result.is_null() {
-        fprintf(
-            stderr,
-            b"tree-sitter failed to allocate %lu bytes\x00" as *const u8 as *const libc::c_char,
-            size,
-        );
-        exit(1 as libc::c_int);
+        panic!("tree-sitter failed to allocate {} bytes", size);
     }
     return result;
 }
@@ -598,12 +588,10 @@ pub unsafe extern "C" fn ts_malloc(mut size: size_t) -> *mut libc::c_void {
 pub unsafe extern "C" fn ts_calloc(mut count: size_t, mut size: size_t) -> *mut libc::c_void {
     let mut result: *mut libc::c_void = calloc(count as usize, size as usize);
     if count > 0 as libc::c_int as libc::c_ulong && result.is_null() {
-        fprintf(
-            stderr,
-            b"tree-sitter failed to allocate %lu bytes\x00" as *const u8 as *const libc::c_char,
-            count.wrapping_mul(size),
+        panic!(
+            "tree-sitter failed to allocate {} bytes",
+            count.wrapping_mul(size)
         );
-        exit(1 as libc::c_int);
     }
     return result;
 }
@@ -815,12 +803,7 @@ pub unsafe extern "C" fn ts_realloc(
 ) -> *mut libc::c_void {
     let mut result: *mut libc::c_void = realloc(buffer, size as usize);
     if size > 0 as libc::c_int as libc::c_ulong && result.is_null() {
-        fprintf(
-            stderr,
-            b"tree-sitter failed to reallocate %lu bytes\x00" as *const u8 as *const libc::c_char,
-            size,
-        );
-        exit(1 as libc::c_int);
+        panic!("tree-sitter failed to reallocate {} bytes", size);
     }
     return result;
 }

@@ -1442,6 +1442,8 @@ pub unsafe extern "C" fn ts_stack_clear(mut self_0: *mut Stack) {
         init
     };
 }
+
+// TODO: consider moving it to the C-ONLY API.
 #[no_mangle]
 pub unsafe extern "C" fn ts_stack_print_dot_graph(
     mut self_0: *mut Stack,
@@ -1454,9 +1456,15 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
         32 as libc::c_int as uint32_t,
     );
     let mut was_recording_allocations: bool = ts_toggle_allocation_recording(0 as libc::c_int != 0);
-    if f.is_null() {
-        f = stderr
-    }
+    let must_close = if f.is_null() {
+        f = libc::fdopen(
+            libc::STDERR_FILENO,
+            b"w\x00".as_ptr() as *const libc::c_char,
+        );
+        true
+    } else {
+        false
+    };
     fprintf(
         f,
         b"digraph stack {\n\x00" as *const u8 as *const libc::c_char,
@@ -1701,6 +1709,9 @@ pub unsafe extern "C" fn ts_stack_print_dot_graph(
         }
     }
     fprintf(f, b"}\n\x00" as *const u8 as *const libc::c_char);
+    if must_close {
+        libc::fclose(f);
+    }
     array__delete(&mut visited_nodes as *mut StackNodeArray as *mut VoidArray);
     ts_toggle_allocation_recording(was_recording_allocations);
     return 1 as libc::c_int != 0;
