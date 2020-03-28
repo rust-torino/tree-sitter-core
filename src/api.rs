@@ -15,8 +15,6 @@ pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: usize = 9;
 
 extern "C" {
     #[no_mangle]
-    pub fn __ctype_b_loc() -> *mut *const libc::c_ushort;
-    #[no_mangle]
     pub static mut stderr: *mut FILE;
     #[no_mangle]
     pub fn iswspace(__wc: wint_t) -> libc::c_int;
