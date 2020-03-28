@@ -1302,7 +1302,7 @@ pub unsafe extern "C" fn clock_now() -> TSClock {
         tv_sec: 0,
         tv_nsec: 0,
     };
-    clock_gettime(1 as libc::c_int, &mut result);
+    clock_gettime(libc::CLOCK_MONOTONIC, &mut result);
     return result;
 }
 #[inline]
