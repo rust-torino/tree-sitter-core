@@ -52,33 +52,29 @@ pub type UnicodeDecodeFunction =
 
 pub type UChar32 = int32_t;
 pub static mut LENGTH_UNDEFINED: Length = {
-    let mut init = Length {
+    Length {
         bytes: 0 as libc::c_int as uint32_t,
         extent: {
-            let mut init = TSPoint {
+            TSPoint {
                 row: 0 as libc::c_int as uint32_t,
                 column: 1 as libc::c_int as uint32_t,
-            };
-            init
+            }
         },
-    };
-    init
+    }
 };
 
 pub static mut TS_DECODE_ERROR: int32_t = -(1 as libc::c_int);
 
 pub static mut LENGTH_MAX: Length = {
-    let mut init = Length {
-        bytes: 4294967295 as libc::c_uint,
+    Length {
+        bytes: 4_294_967_295 as libc::c_uint,
         extent: {
-            let mut init = TSPoint {
-                row: 4294967295 as libc::c_uint,
-                column: 4294967295 as libc::c_uint,
-            };
-            init
+            TSPoint {
+                row: 4_294_967_295 as libc::c_uint,
+                column: 4_294_967_295 as libc::c_uint,
+            }
         },
-    };
-    init
+    }
 };
 
 pub type clockid_t = __clockid_t;
@@ -627,40 +623,30 @@ pub unsafe extern "C" fn ts_free(mut buffer: *mut libc::c_void) {
 #[inline]
 pub unsafe extern "C" fn ts_subtree_padding(mut self_0: Subtree) -> Length {
     if self_0.data.is_inline() {
-        let mut result: Length = {
-            let mut init = Length {
-                bytes: self_0.data.padding_bytes as uint32_t,
-                extent: {
-                    let mut init = TSPoint {
-                        row: self_0.data.padding_rows() as uint32_t,
-                        column: self_0.data.padding_columns as uint32_t,
-                    };
-                    init
-                },
-            };
-            init
+        return Length {
+            bytes: self_0.data.padding_bytes as uint32_t,
+            extent: {
+                TSPoint {
+                    row: self_0.data.padding_rows() as uint32_t,
+                    column: self_0.data.padding_columns as uint32_t,
+                }
+            },
         };
-        return result;
     } else {
         return (*self_0.ptr).padding;
     };
 }
 #[inline]
 pub unsafe extern "C" fn length_zero() -> Length {
-    let mut result: Length = {
-        let mut init = Length {
-            bytes: 0 as libc::c_int as uint32_t,
-            extent: {
-                let mut init = TSPoint {
-                    row: 0 as libc::c_int as uint32_t,
-                    column: 0 as libc::c_int as uint32_t,
-                };
-                init
-            },
-        };
-        init
-    };
-    return result;
+    Length {
+        bytes: 0 as libc::c_int as uint32_t,
+        extent: {
+            TSPoint {
+                row: 0 as libc::c_int as uint32_t,
+                column: 0 as libc::c_int as uint32_t,
+            }
+        },
+    }
 }
 #[inline]
 pub unsafe extern "C" fn point_sub(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
@@ -686,20 +672,15 @@ pub unsafe extern "C" fn ts_subtree_symbol(mut self_0: Subtree) -> TSSymbol {
 #[inline]
 pub unsafe extern "C" fn ts_subtree_size(mut self_0: Subtree) -> Length {
     if self_0.data.is_inline() {
-        let mut result: Length = {
-            let mut init = Length {
-                bytes: self_0.data.size_bytes as uint32_t,
-                extent: {
-                    let mut init = TSPoint {
-                        row: 0 as libc::c_int as uint32_t,
-                        column: self_0.data.size_bytes as uint32_t,
-                    };
-                    init
-                },
-            };
-            init
+        return Length {
+            bytes: self_0.data.size_bytes as uint32_t,
+            extent: {
+                TSPoint {
+                    row: 0 as libc::c_int as uint32_t,
+                    column: self_0.data.size_bytes as uint32_t,
+                }
+            },
         };
-        return result;
     } else {
         return (*self_0.ptr).size;
     }
@@ -715,14 +696,10 @@ pub unsafe extern "C" fn point_add(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
 }
 #[inline]
 pub unsafe extern "C" fn point__new(mut row: libc::c_uint, mut column: libc::c_uint) -> TSPoint {
-    let mut result: TSPoint = {
-        let mut init = TSPoint {
-            row: row,
-            column: column,
-        };
-        init
-    };
-    return result;
+    TSPoint {
+        row: row,
+        column: column,
+    }
 }
 #[inline]
 pub unsafe extern "C" fn ts_subtree_named(mut self_0: Subtree) -> bool {
