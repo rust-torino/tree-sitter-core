@@ -1,9 +1,9 @@
-use crate::*;
+use crate::{util::strncmp, *};
 
-use libc::strncmp;
+use std::os;
 
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_symbol_count(mut self_0: *const TSLanguage) -> uint32_t {
+pub unsafe extern "C" fn ts_language_symbol_count(mut self_0: *const TSLanguage) -> u32 {
     return (*self_0).symbol_count.wrapping_add((*self_0).alias_count);
 }
 /* *
@@ -14,15 +14,15 @@ pub unsafe extern "C" fn ts_language_symbol_count(mut self_0: *const TSLanguage)
  * See also `ts_parser_set_language`.
  */
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_version(mut self_0: *const TSLanguage) -> uint32_t {
+pub unsafe extern "C" fn ts_language_version(mut self_0: *const TSLanguage) -> u32 {
     return (*self_0).version;
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_field_count(mut self_0: *const TSLanguage) -> uint32_t {
-    if (*self_0).version >= 10 as libc::c_int as libc::c_uint {
+pub unsafe extern "C" fn ts_language_field_count(mut self_0: *const TSLanguage) -> u32 {
+    if (*self_0).version >= 10 as os::raw::c_int as os::raw::c_uint {
         return (*self_0).field_count;
     } else {
-        return 0 as libc::c_int as uint32_t;
+        return 0 as os::raw::c_int as u32;
     };
 }
 #[no_mangle]
@@ -32,21 +32,21 @@ pub unsafe extern "C" fn ts_language_table_entry(
     mut symbol: TSSymbol,
     mut result: *mut TableEntry,
 ) {
-    if symbol as libc::c_int == -(1 as libc::c_int) as TSSymbol as libc::c_int
-        || symbol as libc::c_int
-            == -(1 as libc::c_int) as TSSymbol as libc::c_int - 1 as libc::c_int
+    if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int
+        || symbol as os::raw::c_int
+            == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
-        (*result).action_count = 0 as libc::c_int as uint32_t;
-        (*result).is_reusable = 0 as libc::c_int != 0;
+        (*result).action_count = 0 as os::raw::c_int as u32;
+        (*result).is_reusable = 0 as os::raw::c_int != 0;
         (*result).actions = std::ptr::null::<TSParseAction>()
     } else {
-        assert!((symbol as libc::c_uint) < (*self_0).token_count);
-        let mut action_index: uint32_t = ts_language_lookup(self_0, state, symbol) as uint32_t;
+        assert!((symbol as os::raw::c_uint) < (*self_0).token_count);
+        let mut action_index: u32 = ts_language_lookup(self_0, state, symbol) as u32;
         let mut entry: *const TSParseActionEntry =
             &*(*self_0).parse_actions.offset(action_index as isize) as *const TSParseActionEntry;
-        (*result).action_count = (*entry).c2rust_unnamed.count as uint32_t;
+        (*result).action_count = (*entry).c2rust_unnamed.count as u32;
         (*result).is_reusable = (*entry).c2rust_unnamed.reusable();
-        (*result).actions = entry.offset(1 as libc::c_int as isize) as *const TSParseAction
+        (*result).actions = entry.offset(1 as os::raw::c_int as isize) as *const TSParseAction
     };
 }
 #[no_mangle]
@@ -54,24 +54,24 @@ pub unsafe extern "C" fn ts_language_symbol_metadata(
     mut self_0: *const TSLanguage,
     mut symbol: TSSymbol,
 ) -> TSSymbolMetadata {
-    if symbol as libc::c_int == -(1 as libc::c_int) as TSSymbol as libc::c_int {
+    if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
         return {
             let mut init = TSSymbolMetadata {
                 visible_named: [0; 1],
             };
-            init.set_visible(1 as libc::c_int != 0);
-            init.set_named(1 as libc::c_int != 0);
+            init.set_visible(1 as os::raw::c_int != 0);
+            init.set_named(1 as os::raw::c_int != 0);
             init
         };
-    } else if symbol as libc::c_int
-        == -(1 as libc::c_int) as TSSymbol as libc::c_int - 1 as libc::c_int
+    } else if symbol as os::raw::c_int
+        == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
         return {
             let mut init = TSSymbolMetadata {
                 visible_named: [0; 1],
             };
-            init.set_visible(0 as libc::c_int != 0);
-            init.set_named(0 as libc::c_int != 0);
+            init.set_visible(0 as os::raw::c_int != 0);
+            init.set_named(0 as os::raw::c_int != 0);
             init
         };
     } else {
@@ -83,10 +83,10 @@ pub unsafe extern "C" fn ts_language_public_symbol(
     mut self_0: *const TSLanguage,
     mut symbol: TSSymbol,
 ) -> TSSymbol {
-    if symbol as libc::c_int == -(1 as libc::c_int) as TSSymbol as libc::c_int {
+    if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
         return symbol;
     }
-    if (*self_0).version >= 11 as libc::c_int as libc::c_uint {
+    if (*self_0).version >= 11 as os::raw::c_int as os::raw::c_uint {
         return *(*self_0).public_symbol_map.offset(symbol as isize);
     } else {
         return symbol;
@@ -96,44 +96,47 @@ pub unsafe extern "C" fn ts_language_public_symbol(
 pub unsafe extern "C" fn ts_language_symbol_name(
     mut self_0: *const TSLanguage,
     mut symbol: TSSymbol,
-) -> *const libc::c_char {
-    if symbol as libc::c_int == -(1 as libc::c_int) as TSSymbol as libc::c_int {
-        return b"ERROR\x00" as *const u8 as *const libc::c_char;
-    } else if symbol as libc::c_int
-        == -(1 as libc::c_int) as TSSymbol as libc::c_int - 1 as libc::c_int
+) -> *const os::raw::c_char {
+    if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
+        return b"ERROR\x00" as *const u8 as *const os::raw::c_char;
+    } else if symbol as os::raw::c_int
+        == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
-        return b"_ERROR\x00" as *const u8 as *const libc::c_char;
-    } else if (symbol as libc::c_uint) < ts_language_symbol_count(self_0) {
+        return b"_ERROR\x00" as *const u8 as *const os::raw::c_char;
+    } else if (symbol as os::raw::c_uint) < ts_language_symbol_count(self_0) {
         return *(*self_0).symbol_names.offset(symbol as isize);
     } else {
-        return 0 as *const libc::c_char;
+        return 0 as *const os::raw::c_char;
     };
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_symbol_for_name(
     mut self_0: *const TSLanguage,
-    mut string: *const libc::c_char,
-    mut length: uint32_t,
+    mut string: *const os::raw::c_char,
+    mut length: u32,
     mut is_named: bool,
 ) -> TSSymbol {
     if strncmp(
         string,
-        b"ERROR\x00" as *const u8 as *const libc::c_char,
+        b"ERROR\x00" as *const u8 as *const os::raw::c_char,
         length as usize,
     ) == 0
     {
-        return -(1 as libc::c_int) as TSSymbol;
+        return -(1 as os::raw::c_int) as TSSymbol;
     }
-    let mut count: uint32_t = ts_language_symbol_count(self_0);
-    let mut i: TSSymbol = 0 as libc::c_int as TSSymbol;
-    while (i as libc::c_uint) < count {
+    let mut count: u32 = ts_language_symbol_count(self_0);
+    let mut i: TSSymbol = 0 as os::raw::c_int as TSSymbol;
+    while (i as os::raw::c_uint) < count {
         let mut metadata: TSSymbolMetadata = ts_language_symbol_metadata(self_0, i);
-        if !(!metadata.visible() || metadata.named() as libc::c_int != is_named as libc::c_int) {
-            let mut symbol_name: *const libc::c_char = *(*self_0).symbol_names.offset(i as isize);
+        if !(!metadata.visible()
+            || metadata.named() as os::raw::c_int != is_named as os::raw::c_int)
+        {
+            let mut symbol_name: *const os::raw::c_char =
+                *(*self_0).symbol_names.offset(i as isize);
             if strncmp(symbol_name, string, length as usize) == 0
                 && *symbol_name.offset(length as isize) == 0
             {
-                if (*self_0).version >= 11 as libc::c_int as libc::c_uint {
+                if (*self_0).version >= 11 as os::raw::c_int as os::raw::c_uint {
                     return *(*self_0).public_symbol_map.offset(i as isize);
                 } else {
                     return i;
@@ -142,7 +145,7 @@ pub unsafe extern "C" fn ts_language_symbol_for_name(
         }
         i = i.wrapping_add(1)
     }
-    return 0 as libc::c_int as TSSymbol;
+    return 0 as os::raw::c_int as TSSymbol;
 }
 /* *
  * Check whether the given node type id belongs to named nodes, anonymous nodes,
@@ -168,24 +171,24 @@ pub unsafe extern "C" fn ts_language_symbol_type(
 pub unsafe extern "C" fn ts_language_field_name_for_id(
     mut self_0: *const TSLanguage,
     mut id: TSFieldId,
-) -> *const libc::c_char {
-    let mut count: uint32_t = ts_language_field_count(self_0);
-    if count != 0 && id as libc::c_uint <= count {
+) -> *const os::raw::c_char {
+    let mut count: u32 = ts_language_field_count(self_0);
+    if count != 0 && id as os::raw::c_uint <= count {
         return *(*self_0).field_names.offset(id as isize);
     } else {
-        return 0 as *const libc::c_char;
+        return 0 as *const os::raw::c_char;
     };
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_field_id_for_name(
     mut self_0: *const TSLanguage,
-    mut name: *const libc::c_char,
-    mut name_length: uint32_t,
+    mut name: *const os::raw::c_char,
+    mut name_length: u32,
 ) -> TSFieldId {
-    let mut count: uint32_t = ts_language_field_count(self_0);
-    let mut i: TSSymbol = 1 as libc::c_int as TSSymbol;
-    while (i as libc::c_uint) < count.wrapping_add(1 as libc::c_int as libc::c_uint) {
+    let mut count: u32 = ts_language_field_count(self_0);
+    let mut i: TSSymbol = 1 as os::raw::c_int as TSSymbol;
+    while (i as os::raw::c_uint) < count.wrapping_add(1) {
         match strncmp(
             name,
             *(*self_0).field_names.offset(i as isize),
@@ -193,16 +196,16 @@ pub unsafe extern "C" fn ts_language_field_id_for_name(
         ) {
             0 => {
                 if *(*(*self_0).field_names.offset(i as isize)).offset(name_length as isize)
-                    as libc::c_int
-                    == 0 as libc::c_int
+                    as os::raw::c_int
+                    == 0 as os::raw::c_int
                 {
                     return i;
                 }
             }
-            -1 => return 0 as libc::c_int as TSFieldId,
+            -1 => return 0 as os::raw::c_int as TSFieldId,
             _ => {}
         }
         i = i.wrapping_add(1)
     }
-    return 0 as libc::c_int as TSFieldId;
+    return 0 as os::raw::c_int as TSFieldId;
 }
