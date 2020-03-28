@@ -7,11 +7,12 @@ unsafe extern "C" fn ts_range_array_add(
     mut end: Length,
 ) {
     if (*self_0).size > 0 as libc::c_int as libc::c_uint {
-        assert!((*self_0)
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-            < (*self_0).size
-            );
+        assert!(
+            (*self_0)
+                .size
+                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                < (*self_0).size
+        );
         let mut last_range: *mut TSRange = &mut *(*self_0).contents.offset(
             (*self_0)
                 .size
@@ -198,12 +199,13 @@ unsafe extern "C" fn iterator_done(mut self_0: *mut Iterator_0) -> bool {
     return (*self_0).cursor.stack.size == 0 as libc::c_int as libc::c_uint;
 }
 unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Length {
-    assert!((*self_0)
-        .cursor
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).cursor.stack.size
+    assert!(
+        (*self_0)
+            .cursor
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).cursor.stack.size
     );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
@@ -219,12 +221,13 @@ unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Len
     };
 }
 unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Length {
-    assert!((*self_0)
-        .cursor
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).cursor.stack.size
+    assert!(
+        (*self_0)
+            .cursor
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).cursor.stack.size
     );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
@@ -241,12 +244,13 @@ unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Lengt
     };
 }
 unsafe extern "C" fn iterator_tree_is_visible(mut self_0: *const Iterator_0) -> bool {
-    assert!((*self_0)
-        .cursor
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).cursor.stack.size
+    assert!(
+        (*self_0)
+            .cursor
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).cursor.stack.size
     );
     let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
@@ -329,12 +333,13 @@ unsafe extern "C" fn iterator_ascend(mut self_0: *mut Iterator_0) {
     if iterator_tree_is_visible(self_0) as libc::c_int != 0 && !(*self_0).in_padding {
         (*self_0).visible_depth = (*self_0).visible_depth.wrapping_sub(1)
     }
-    assert!((*self_0)
-        .cursor
-        .stack
-        .size
-        .wrapping_sub(1 as libc::c_int as libc::c_uint)
-        < (*self_0).cursor.stack.size
+    assert!(
+        (*self_0)
+            .cursor
+            .stack
+            .size
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            < (*self_0).cursor.stack.size
     );
     if (*(&mut *(*self_0).cursor.stack.contents.offset(
         (*self_0)
@@ -360,12 +365,13 @@ unsafe extern "C" fn iterator_descend(
     let mut did_descend: bool = false;
     loop {
         did_descend = 0 as libc::c_int != 0;
-        assert!((*self_0)
-            .cursor
-            .stack
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-            < (*self_0).cursor.stack.size
+        assert!(
+            (*self_0)
+                .cursor
+                .stack
+                .size
+                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                < (*self_0).cursor.stack.size
         );
         let mut entry: TreeCursorEntry = *(&mut *(*self_0).cursor.stack.contents.offset(
             (*self_0)
@@ -450,12 +456,13 @@ unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
         if iterator_done(self_0) {
             return;
         }
-        assert!((*self_0)
-            .cursor
-            .stack
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
-            < (*self_0).cursor.stack.size
+        assert!(
+            (*self_0)
+                .cursor
+                .stack
+                .size
+                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                < (*self_0).cursor.stack.size
         );
         let mut parent: *const Subtree = (*(&mut *(*self_0).cursor.stack.contents.offset(
             (*self_0)
