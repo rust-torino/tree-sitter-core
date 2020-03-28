@@ -1,6 +1,5 @@
 use crate::{bindings::Parser, error::Error, tests::helpers::dirs::DATA_DIR};
 use git2::{build::RepoBuilder, BranchType, MergeOptions, Repository, ResetType};
-#[cfg(unix)]
 use std::path::PathBuf;
 #[cfg(unix)]
 use std::process::{Child, ChildStdin, Command, Stdio};

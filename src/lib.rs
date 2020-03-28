@@ -23,6 +23,12 @@ mod tree;
 mod tree_cursor;
 mod util;
 
+#[cfg(feature = "capi")]
+mod capi;
+
 pub use api::*;
+
+#[cfg(feature = "capi")]
+pub use capi::*;
 
 use reusable_node::*;

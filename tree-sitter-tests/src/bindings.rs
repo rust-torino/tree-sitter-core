@@ -599,7 +599,7 @@ impl Parser {
         if let Some(flag) = flag {
             ffi::ts_parser_set_cancellation_flag(
                 self.0.as_ptr(),
-                flag as *const AtomicUsize as *const u64,
+                flag as *const AtomicUsize as *const usize,
             );
         } else {
             ffi::ts_parser_set_cancellation_flag(self.0.as_ptr(), ptr::null());

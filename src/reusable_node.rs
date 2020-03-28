@@ -1,5 +1,7 @@
 use crate::*;
 
+use std::os;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ReusableNode {
@@ -10,15 +12,15 @@ pub struct ReusableNode {
 #[repr(C)]
 pub struct StackEntryArray {
     pub contents: *mut StackEntry,
-    pub size: uint32_t,
-    pub capacity: uint32_t,
+    pub size: u32,
+    pub capacity: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct StackEntry {
     pub tree: Subtree,
-    pub child_index: uint32_t,
-    pub byte_offset: uint32_t,
+    pub child_index: u32,
+    pub byte_offset: u32,
 }
 
 #[inline]
@@ -28,8 +30,8 @@ pub unsafe extern "C" fn reusable_node_new() -> ReusableNode {
             stack: {
                 let mut init = StackEntryArray {
                     contents: std::ptr::null_mut::<StackEntry>(),
-                    size: 0 as libc::c_int as uint32_t,
-                    capacity: 0 as libc::c_int as uint32_t,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
                 };
                 init
             },
@@ -42,7 +44,7 @@ pub unsafe extern "C" fn reusable_node_new() -> ReusableNode {
 }
 #[inline]
 pub unsafe extern "C" fn reusable_node_clear(mut self_0: *mut ReusableNode) {
-    (*self_0).stack.size = 0 as libc::c_int as uint32_t;
+    (*self_0).stack.size = 0 as os::raw::c_int as u32;
     (*self_0).last_external_token = Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };
@@ -52,29 +54,27 @@ pub unsafe extern "C" fn reusable_node_reset(mut self_0: *mut ReusableNode, mut 
     reusable_node_clear(self_0);
     array__grow(
         &mut (*self_0).stack as *mut StackEntryArray as *mut VoidArray,
-        1 as libc::c_int as size_t,
-        ::std::mem::size_of::<StackEntry>() as libc::c_ulong,
+        1 as os::raw::c_int as usize,
+        ::std::mem::size_of::<StackEntry>(),
     );
     let fresh5 = (*self_0).stack.size;
     (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
     *(*self_0).stack.contents.offset(fresh5 as isize) = {
         let mut init = StackEntry {
             tree: tree,
-            child_index: 0 as libc::c_int as uint32_t,
-            byte_offset: 0 as libc::c_int as uint32_t,
+            child_index: 0 as os::raw::c_int as u32,
+            byte_offset: 0 as os::raw::c_int as u32,
         };
         init
     };
 }
 #[inline]
 pub unsafe extern "C" fn reusable_node_tree(mut self_0: *mut ReusableNode) -> Subtree {
-    return if (*self_0).stack.size > 0 as libc::c_int as libc::c_uint {
-        (*(*self_0).stack.contents.offset(
-            (*self_0)
-                .stack
-                .size
-                .wrapping_sub(1 as libc::c_int as libc::c_uint) as isize,
-        ))
+    return if (*self_0).stack.size > 0 as os::raw::c_int as os::raw::c_uint {
+        (*(*self_0)
+            .stack
+            .contents
+            .offset((*self_0).stack.size.wrapping_sub(1) as isize))
         .tree
     } else {
         Subtree {
@@ -83,17 +83,15 @@ pub unsafe extern "C" fn reusable_node_tree(mut self_0: *mut ReusableNode) -> Su
     };
 }
 #[inline]
-pub unsafe extern "C" fn reusable_node_byte_offset(mut self_0: *mut ReusableNode) -> uint32_t {
-    return if (*self_0).stack.size > 0 as libc::c_int as libc::c_uint {
-        (*(*self_0).stack.contents.offset(
-            (*self_0)
-                .stack
-                .size
-                .wrapping_sub(1 as libc::c_int as libc::c_uint) as isize,
-        ))
+pub unsafe extern "C" fn reusable_node_byte_offset(mut self_0: *mut ReusableNode) -> u32 {
+    return if (*self_0).stack.size > 0 as os::raw::c_int as os::raw::c_uint {
+        (*(*self_0)
+            .stack
+            .contents
+            .offset((*self_0).stack.size.wrapping_sub(1) as isize))
         .byte_offset
     } else {
-        4294967295 as libc::c_uint
+        4294967295 as os::raw::c_uint
     };
 }
 #[inline]
@@ -106,16 +104,15 @@ pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
         (*self_0)
             .stack
             .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
             < (*self_0).stack.size
     );
-    let mut last_entry: StackEntry = *(&mut *(*self_0).stack.contents.offset(
-        (*self_0)
-            .stack
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint) as isize,
-    ) as *mut StackEntry);
-    let mut byte_offset: uint32_t = last_entry
+    let mut last_entry: StackEntry = *(&mut *(*self_0)
+        .stack
+        .contents
+        .offset((*self_0).stack.size.wrapping_sub(1) as isize)
+        as *mut StackEntry);
+    let mut byte_offset: u32 = last_entry
         .byte_offset
         .wrapping_add(ts_subtree_total_bytes(last_entry.tree));
     if ts_subtree_has_external_tokens(last_entry.tree) {
@@ -132,32 +129,29 @@ pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
             parse_state: 0,
         },
     };
-    let mut next_index: uint32_t = 0;
+    let mut next_index: u32 = 0;
     loop {
         (*self_0).stack.size = (*self_0).stack.size.wrapping_sub(1);
         let mut popped_entry: StackEntry = *(*self_0)
             .stack
             .contents
             .offset((*self_0).stack.size as isize);
-        next_index = popped_entry
-            .child_index
-            .wrapping_add(1 as libc::c_int as libc::c_uint);
-        if (*self_0).stack.size == 0 as libc::c_int as libc::c_uint {
+        next_index = popped_entry.child_index.wrapping_add(1);
+        if (*self_0).stack.size == 0 as os::raw::c_int as os::raw::c_uint {
             return;
         }
         assert!(
             (*self_0)
                 .stack
                 .size
-                .wrapping_sub(1 as libc::c_int as libc::c_uint)
+                .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
                 < (*self_0).stack.size
         );
-        tree = (*(&mut *(*self_0).stack.contents.offset(
-            (*self_0)
-                .stack
-                .size
-                .wrapping_sub(1 as libc::c_int as libc::c_uint) as isize,
-        ) as *mut StackEntry))
+        tree = (*(&mut *(*self_0)
+            .stack
+            .contents
+            .offset((*self_0).stack.size.wrapping_sub(1) as isize)
+            as *mut StackEntry))
             .tree;
         if !(ts_subtree_child_count(tree) <= next_index) {
             break;
@@ -165,8 +159,8 @@ pub unsafe extern "C" fn reusable_node_advance(mut self_0: *mut ReusableNode) {
     }
     array__grow(
         &mut (*self_0).stack as *mut StackEntryArray as *mut VoidArray,
-        1 as libc::c_int as size_t,
-        ::std::mem::size_of::<StackEntry>() as libc::c_ulong,
+        1 as os::raw::c_int as usize,
+        ::std::mem::size_of::<StackEntry>(),
     );
     let fresh6 = (*self_0).stack.size;
     (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
@@ -189,20 +183,19 @@ pub unsafe extern "C" fn reusable_node_descend(mut self_0: *mut ReusableNode) ->
         (*self_0)
             .stack
             .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
             < (*self_0).stack.size
     );
-    let mut last_entry: StackEntry = *(&mut *(*self_0).stack.contents.offset(
-        (*self_0)
-            .stack
-            .size
-            .wrapping_sub(1 as libc::c_int as libc::c_uint) as isize,
-    ) as *mut StackEntry);
-    if ts_subtree_child_count(last_entry.tree) > 0 as libc::c_int as libc::c_uint {
+    let mut last_entry: StackEntry = *(&mut *(*self_0)
+        .stack
+        .contents
+        .offset((*self_0).stack.size.wrapping_sub(1) as isize)
+        as *mut StackEntry);
+    if ts_subtree_child_count(last_entry.tree) > 0 as os::raw::c_int as os::raw::c_uint {
         array__grow(
             &mut (*self_0).stack as *mut StackEntryArray as *mut VoidArray,
-            1 as libc::c_int as size_t,
-            ::std::mem::size_of::<StackEntry>() as libc::c_ulong,
+            1 as os::raw::c_int as usize,
+            ::std::mem::size_of::<StackEntry>(),
         );
         let fresh7 = (*self_0).stack.size;
         (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
@@ -212,15 +205,15 @@ pub unsafe extern "C" fn reusable_node_descend(mut self_0: *mut ReusableNode) ->
                     .c2rust_unnamed
                     .c2rust_unnamed
                     .children
-                    .offset(0 as libc::c_int as isize),
-                child_index: 0 as libc::c_int as uint32_t,
+                    .offset(0 as os::raw::c_int as isize),
+                child_index: 0 as os::raw::c_int as u32,
                 byte_offset: last_entry.byte_offset,
             };
             init
         };
-        return 1 as libc::c_int != 0;
+        return 1 as os::raw::c_int != 0;
     } else {
-        return 0 as libc::c_int != 0;
+        return 0 as os::raw::c_int != 0;
     };
 }
 #[inline]
