@@ -135,19 +135,7 @@ unsafe extern "C" fn ts_parser__breakdown_top_of_stack(
         while i < pop.size {
             let mut slice: StackSlice = *pop.contents.offset(i as isize);
             let mut state: TSStateId = ts_stack_state((*self_0).stack, slice.version);
-            if (0 as libc::c_int as uint32_t) < slice.subtrees.size {
-            } else {
-                __assert_fail(
-                    b"(uint32_t)0 < (&slice.subtrees)->size\x00" as *const u8
-                        as *const libc::c_char,
-                    b"lib/src/parser.c\x00" as *const u8 as *const libc::c_char,
-                    154 as libc::c_int as libc::c_uint,
-                    (*::std::mem::transmute::<&[u8; 66], &[libc::c_char; 66]>(
-                        b"_Bool ts_parser__breakdown_top_of_stack(TSParser *, StackVersion)\x00",
-                    ))
-                    .as_ptr(),
-                );
-            }
+            assert!((0 as libc::c_int as uint32_t) < slice.subtrees.size);
             let mut parent: Subtree =
                 *(&mut *slice.subtrees.contents.offset(0 as libc::c_int as isize) as *mut Subtree);
             let mut j: uint32_t = 0 as libc::c_int as uint32_t;
@@ -1234,18 +1222,7 @@ unsafe extern "C" fn ts_parser__accept(
     mut version: StackVersion,
     mut lookahead: Subtree,
 ) {
-    if ts_subtree_is_eof(lookahead) {
-    } else {
-        __assert_fail(
-            b"ts_subtree_is_eof(lookahead)\x00" as *const u8 as *const libc::c_char,
-            b"lib/src/parser.c\x00" as *const u8 as *const libc::c_char,
-            863 as libc::c_int as libc::c_uint,
-            (*::std::mem::transmute::<&[u8; 58], &[libc::c_char; 58]>(
-                b"void ts_parser__accept(TSParser *, StackVersion, Subtree)\x00",
-            ))
-            .as_ptr(),
-        );
-    }
+    assert!(ts_subtree_is_eof(lookahead));
     ts_stack_push(
         (*self_0).stack,
         version,
@@ -1264,18 +1241,7 @@ unsafe extern "C" fn ts_parser__accept(
         while j.wrapping_add(1 as libc::c_int as libc::c_uint) > 0 as libc::c_int as libc::c_uint {
             let mut child: Subtree = *trees.contents.offset(j as isize);
             if !ts_subtree_extra(child) {
-                if !child.data.is_inline() {
-                } else {
-                    __assert_fail(
-                        b"!child.data.is_inline\x00" as *const u8 as *const libc::c_char,
-                        b"lib/src/parser.c\x00" as *const u8 as *const libc::c_char,
-                        874 as libc::c_int as libc::c_uint,
-                        (*::std::mem::transmute::<&[u8; 58], &[libc::c_char; 58]>(
-                            b"void ts_parser__accept(TSParser *, StackVersion, Subtree)\x00",
-                        ))
-                        .as_ptr(),
-                    );
-                }
+                assert!(!child.data.is_inline());
                 let mut child_count: uint32_t = ts_subtree_child_count(child);
                 let mut k: uint32_t = 0 as libc::c_int as uint32_t;
                 while k < child_count {
@@ -1309,18 +1275,7 @@ unsafe extern "C" fn ts_parser__accept(
                 j = j.wrapping_sub(1)
             }
         }
-        if !root.ptr.is_null() {
-        } else {
-            __assert_fail(
-                b"root.ptr\x00" as *const u8 as *const libc::c_char,
-                b"lib/src/parser.c\x00" as *const u8 as *const libc::c_char,
-                892 as libc::c_int as libc::c_uint,
-                (*::std::mem::transmute::<&[u8; 58], &[libc::c_char; 58]>(
-                    b"void ts_parser__accept(TSParser *, StackVersion, Subtree)\x00",
-                ))
-                .as_ptr(),
-            );
-        }
+        assert!(!root.ptr.is_null());
         (*self_0).accept_count = (*self_0).accept_count.wrapping_add(1);
         if !(*self_0).finished_tree.ptr.is_null() {
             if ts_parser__select_tree(self_0, (*self_0).finished_tree, root) {
@@ -1568,18 +1523,7 @@ unsafe extern "C" fn ts_parser__handle_error(
     let mut i: libc::c_uint = previous_version_count;
     while i < version_count {
         let mut did_merge: bool = ts_stack_merge((*self_0).stack, version, previous_version_count);
-        if did_merge {
-        } else {
-            __assert_fail(
-                b"did_merge\x00" as *const u8 as *const libc::c_char,
-                b"lib/src/parser.c\x00" as *const u8 as *const libc::c_char,
-                1074 as libc::c_int as libc::c_uint,
-                (*::std::mem::transmute::<&[u8; 65], &[libc::c_char; 65]>(
-                    b"void ts_parser__handle_error(TSParser *, StackVersion, TSSymbol)\x00",
-                ))
-                .as_ptr(),
-            );
-        }
+        assert!(did_merge);
         i = i.wrapping_add(1)
     }
     ts_stack_record_summary((*self_0).stack, version, MAX_SUMMARY_DEPTH);
@@ -1630,16 +1574,7 @@ unsafe extern "C" fn ts_parser__recover_to_state(
         } else {
             let mut error_trees: SubtreeArray = ts_stack_pop_error((*self_0).stack, slice.version);
             if error_trees.size > 0 as libc::c_int as libc::c_uint {
-                if error_trees.size == 1 as libc::c_int as libc::c_uint {
-                } else {
-                    __assert_fail(b"error_trees.size == 1\x00" as *const u8 as
-                                      *const libc::c_char,
-                                  b"lib/src/parser.c\x00" as *const u8 as
-                                      *const libc::c_char,
-                                  1108 as libc::c_int as libc::c_uint,
-                                  (*::std::mem::transmute::<&[u8; 85],
-                                                            &[libc::c_char; 85]>(b"_Bool ts_parser__recover_to_state(TSParser *, StackVersion, unsigned int, TSStateId)\x00")).as_ptr());
-                }
+                assert!(error_trees.size == 1 as libc::c_int as libc::c_uint);
                 let mut error_tree: Subtree =
                     *error_trees.contents.offset(0 as libc::c_int as isize);
                 let mut error_child_count: uint32_t = ts_subtree_child_count(error_tree);

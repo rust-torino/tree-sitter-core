@@ -40,16 +40,7 @@ pub unsafe extern "C" fn ts_language_table_entry(
         (*result).is_reusable = 0 as libc::c_int != 0;
         (*result).actions = 0 as *const TSParseAction
     } else {
-        if (symbol as libc::c_uint) < (*self_0).token_count {
-        } else {
-            __assert_fail(b"symbol < self->token_count\x00" as *const u8 as
-                              *const libc::c_char,
-                          b"lib/src/language.c\x00" as *const u8 as
-                              *const libc::c_char,
-                          33 as libc::c_int as libc::c_uint,
-                          (*::std::mem::transmute::<&[u8; 84],
-                                                    &[libc::c_char; 84]>(b"void ts_language_table_entry(const TSLanguage *, TSStateId, TSSymbol, TableEntry *)\x00")).as_ptr());
-        }
+        assert!((symbol as libc::c_uint) < (*self_0).token_count);
         let mut action_index: uint32_t = ts_language_lookup(self_0, state, symbol) as uint32_t;
         let mut entry: *const TSParseActionEntry =
             &*(*self_0).parse_actions.offset(action_index as isize) as *const TSParseActionEntry;
