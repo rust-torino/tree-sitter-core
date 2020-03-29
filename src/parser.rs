@@ -32,7 +32,7 @@ pub struct TSParser {
     pub reusable_node: ReusableNode,
     pub external_scanner_payload: *mut libc::c_void,
     pub dot_graph_file: *mut FILE,
-    pub end_clock: TSClock,
+    pub end_clock: Option<TSClock>,
     pub timeout_duration: TSDuration,
     pub accept_count: libc::c_uint,
     pub operation_count: libc::c_uint,
@@ -2039,8 +2039,7 @@ unsafe extern "C" fn ts_parser__advance(
         if (*self_0).operation_count == 0 as libc::c_int as libc::c_uint
             && (!(*self_0).cancellation_flag.is_null()
                 && atomic_load((*self_0).cancellation_flag) != 0
-                || !clock_is_null((*self_0).end_clock)
-                    && clock_is_gt(clock_now(), (*self_0).end_clock) as libc::c_int != 0)
+                || clock_is_gt(clock_now(), (*self_0).end_clock))
         {
             ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
             return 0 as libc::c_int != 0;
@@ -2450,8 +2449,8 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
     (*self_0).reusable_node = reusable_node_new();
     (*self_0).dot_graph_file = 0 as *mut FILE;
     (*self_0).cancellation_flag = 0 as *const size_t;
-    (*self_0).timeout_duration = 0 as libc::c_int as TSDuration;
-    (*self_0).end_clock = clock_null();
+    (*self_0).timeout_duration = duration_from_micros(0);
+    (*self_0).end_clock = None;
     (*self_0).operation_count = 0 as libc::c_int as libc::c_uint;
     (*self_0).old_tree = Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
@@ -2586,7 +2585,7 @@ pub unsafe extern "C" fn ts_parser_set_cancellation_flag(
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_timeout_micros(mut self_0: *const TSParser) -> uint64_t {
-    return duration_to_micros((*self_0).timeout_duration);
+    duration_to_micros((*self_0).timeout_duration)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_set_timeout_micros(
@@ -2734,10 +2733,10 @@ pub unsafe extern "C" fn ts_parser_parse(
     let mut last_position: uint32_t = 0 as libc::c_int as uint32_t;
     let mut version_count: uint32_t = 0 as libc::c_int as uint32_t;
     (*self_0).operation_count = 0 as libc::c_int as libc::c_uint;
-    if (*self_0).timeout_duration != 0 {
-        (*self_0).end_clock = clock_after(clock_now(), (*self_0).timeout_duration)
+    if duration_to_micros((*self_0).timeout_duration) != 0 {
+        (*self_0).end_clock = Some(clock_after(clock_now(), (*self_0).timeout_duration))
     } else {
-        (*self_0).end_clock = clock_null()
+        (*self_0).end_clock = None
     }
     loop {
         let mut version: StackVersion = 0 as libc::c_int as StackVersion;

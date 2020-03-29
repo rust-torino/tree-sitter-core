@@ -3,8 +3,9 @@ pub use crate::{
     subtree::*, tree::*, tree_cursor::*,
 };
 
-use libc::{calloc, clock_gettime, free, malloc, memcpy, memmove, memset, realloc, timespec};
+use libc::{calloc, free, malloc, memcpy, memmove, memset, realloc};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
 
 pub const TREE_SITTER_LANGUAGE_VERSION: usize = 11;
 
@@ -66,14 +67,8 @@ pub static mut LENGTH_MAX: Length = {
 pub type clockid_t = __clockid_t;
 pub type uint64_t = __uint64_t;
 
-pub type TSDuration = uint64_t;
-// POSIX with monotonic clock support (Linux)
-// * Represent a time as a monotonic (seconds, nanoseconds) pair.
-// * Represent a duration as a number of microseconds.
-//
-// On these platforms, parse timeouts will correspond accurately to
-// real time, regardless of what other processes are running.
-pub type TSClock = timespec;
+pub type TSDuration = Duration;
+pub type TSClock = Instant;
 
 pub type TSLogType = libc::c_uint;
 pub const TSLogTypeLex: TSLogType = 1;
@@ -1228,50 +1223,19 @@ pub unsafe extern "C" fn ts_decode_utf8(
 // Parser
 
 #[inline]
-pub unsafe extern "C" fn clock_now() -> TSClock {
-    let mut result: TSClock = TSClock {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    clock_gettime(libc::CLOCK_MONOTONIC, &mut result);
-    return result;
+pub extern "C" fn clock_now() -> TSClock {
+    TSClock::now()
 }
 #[inline]
-pub unsafe extern "C" fn clock_null() -> TSClock {
-    return {
-        let mut init = timespec {
-            tv_sec: 0 as libc::c_int as __time_t,
-            tv_nsec: 0 as libc::c_int as __syscall_slong_t,
-        };
-        init
-    };
+pub extern "C" fn clock_after(mut base: TSClock, mut duration: TSDuration) -> TSClock {
+    base + duration
 }
 #[inline]
-pub unsafe extern "C" fn clock_after(mut base: TSClock, mut duration: TSDuration) -> TSClock {
-    let mut result: TSClock = base;
-    result.tv_sec = (result.tv_sec as libc::c_ulong)
-        .wrapping_add(duration.wrapping_div(1000000 as libc::c_int as libc::c_ulong))
-        as __time_t as __time_t;
-    result.tv_nsec = (result.tv_nsec as libc::c_ulong).wrapping_add(
-        duration
-            .wrapping_rem(1000000 as libc::c_int as libc::c_ulong)
-            .wrapping_mul(1000 as libc::c_int as libc::c_ulong),
-    ) as __syscall_slong_t as __syscall_slong_t;
-    return result;
-}
-#[inline]
-pub unsafe extern "C" fn clock_is_null(mut self_0: TSClock) -> bool {
-    return self_0.tv_sec == 0;
-}
-#[inline]
-pub unsafe extern "C" fn clock_is_gt(mut self_0: TSClock, mut other: TSClock) -> bool {
-    if self_0.tv_sec > other.tv_sec {
-        return 1 as libc::c_int != 0;
+pub extern "C" fn clock_is_gt(mut self_0: TSClock, mut other: Option<TSClock>) -> bool {
+    match other {
+        Some(x) => self_0 > x,
+        None => false,
     }
-    if self_0.tv_sec < other.tv_sec {
-        return 0 as libc::c_int != 0;
-    }
-    return self_0.tv_nsec > other.tv_nsec;
 }
 
 #[inline]
@@ -1469,13 +1433,18 @@ pub unsafe extern "C" fn ts_reduce_action_set_add(
 }
 
 #[inline]
-pub unsafe extern "C" fn duration_from_micros(mut micros: uint64_t) -> TSDuration {
-    return micros;
+pub extern "C" fn duration_from_micros(mut micros: uint64_t) -> TSDuration {
+    Duration::from_micros(micros)
 }
 
 #[inline]
-pub unsafe extern "C" fn duration_to_micros(mut self_0: TSDuration) -> uint64_t {
-    return self_0;
+pub unsafe extern "C" fn duration_to_micros(mut self_0: TSDuration) -> u64 {
+    let micros = self_0.as_micros();
+    if micros > (<u64>::max_value() as u128) {
+        panic!("tree-sitter failed to convert duration to 64bit microseconds");
+    } else {
+        micros as u64
+    }
 }
 
 #[inline]
