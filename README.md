@@ -6,7 +6,7 @@
 ## TODO
 - [x] Oxidize
 - [x] cargo-c/cbindgen configuration
-- [ ] Remove the libc dependency
+- [x] Remove the libc dependency
 - [ ] Split API and Parser in 2 crates
 - [ ] Deal with the macros in the public header
 - [ ] Link a parser with the generated lib
