@@ -544,7 +544,7 @@ static ALLOCATIONS: Lazy<Mutex<RefCell<BTreeMap<usize, Layout>>>> =
 
 // Private
 #[inline]
-pub unsafe extern "C" fn ts_malloc(mut size: usize) -> *mut ffi::c_void {
+pub(crate) unsafe extern "C" fn ts_malloc(mut size: usize) -> *mut ffi::c_void {
     if size == 0 {
         return ptr::null_mut();
     }
@@ -557,10 +557,10 @@ pub unsafe extern "C" fn ts_malloc(mut size: usize) -> *mut ffi::c_void {
 
     let allocations = ALLOCATIONS.lock().unwrap();
     allocations.borrow_mut().insert(result as usize, layout);
-    return result as *mut ffi::c_void;
+    result as *mut ffi::c_void
 }
 #[inline]
-pub unsafe extern "C" fn ts_calloc(mut count: usize, mut size: usize) -> *mut ffi::c_void {
+pub(crate) unsafe extern "C" fn ts_calloc(mut count: usize, mut size: usize) -> *mut ffi::c_void {
     if count == 0 || size == 0 {
         return ptr::null_mut();
     }
@@ -577,10 +577,10 @@ pub unsafe extern "C" fn ts_calloc(mut count: usize, mut size: usize) -> *mut ff
     let allocations = ALLOCATIONS.lock().unwrap();
     allocations.borrow_mut().insert(result as usize, layout);
 
-    return result as *mut ffi::c_void;
+    result as *mut ffi::c_void
 }
 #[inline]
-pub unsafe extern "C" fn ts_free(mut buffer: *mut ffi::c_void) {
+pub(crate) unsafe extern "C" fn ts_free(mut buffer: *mut ffi::c_void) {
     if buffer.is_null() {
         return;
     }
@@ -594,9 +594,9 @@ pub unsafe extern "C" fn ts_free(mut buffer: *mut ffi::c_void) {
     alloc::dealloc(buffer as *mut u8, layout);
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_padding(mut self_0: Subtree) -> Length {
+pub(crate) unsafe extern "C" fn ts_subtree_padding(mut self_0: Subtree) -> Length {
     if self_0.data.is_inline() {
-        return Length {
+        Length {
             bytes: self_0.data.padding_bytes as u32,
             extent: {
                 TSPoint {
@@ -604,13 +604,13 @@ pub unsafe extern "C" fn ts_subtree_padding(mut self_0: Subtree) -> Length {
                     column: self_0.data.padding_columns as u32,
                 }
             },
-        };
+        }
     } else {
-        return (*self_0.ptr).padding;
-    };
+        (*self_0.ptr).padding
+    }
 }
 #[inline]
-pub unsafe extern "C" fn length_zero() -> Length {
+pub(crate) unsafe extern "C" fn length_zero() -> Length {
     Length {
         bytes: 0 as os::raw::c_int as u32,
         extent: {
@@ -622,30 +622,30 @@ pub unsafe extern "C" fn length_zero() -> Length {
     }
 }
 #[inline]
-pub unsafe extern "C" fn point_sub(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
+pub(crate) unsafe extern "C" fn point_sub(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
     if a.row > b.row {
-        return point__new(a.row.wrapping_sub(b.row), a.column);
+        point__new(a.row.wrapping_sub(b.row), a.column)
     } else {
-        return point__new(
+        point__new(
             0 as os::raw::c_int as os::raw::c_uint,
             a.column.wrapping_sub(b.column),
-        );
-    };
+        )
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_symbol(mut self_0: Subtree) -> TSSymbol {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.symbol as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_symbol(mut self_0: Subtree) -> TSSymbol {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.symbol as TSSymbol
     } else {
-        (*self_0.ptr).symbol as os::raw::c_int
-    } as TSSymbol;
+        (*self_0.ptr).symbol as TSSymbol
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_size(mut self_0: Subtree) -> Length {
+pub(crate) unsafe extern "C" fn ts_subtree_size(mut self_0: Subtree) -> Length {
     if self_0.data.is_inline() {
-        return Length {
+        Length {
             bytes: self_0.data.size_bytes as u32,
             extent: {
                 TSPoint {
@@ -653,127 +653,119 @@ pub unsafe extern "C" fn ts_subtree_size(mut self_0: Subtree) -> Length {
                     column: self_0.data.size_bytes as u32,
                 }
             },
-        };
+        }
     } else {
-        return (*self_0.ptr).size;
+        (*self_0.ptr).size
     }
 }
 
 #[inline]
-pub unsafe extern "C" fn point_add(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
+pub(crate) unsafe extern "C" fn point_add(mut a: TSPoint, mut b: TSPoint) -> TSPoint {
     if b.row > 0 as os::raw::c_int as os::raw::c_uint {
-        return point__new(a.row.wrapping_add(b.row), b.column);
+        point__new(a.row.wrapping_add(b.row), b.column)
     } else {
-        return point__new(a.row, a.column.wrapping_add(b.column));
-    };
+        point__new(a.row, a.column.wrapping_add(b.column))
+    }
 }
 #[inline]
-pub unsafe extern "C" fn point__new(
+pub(crate) unsafe extern "C" fn point__new(
     mut row: os::raw::c_uint,
     mut column: os::raw::c_uint,
 ) -> TSPoint {
-    TSPoint {
-        row: row,
-        column: column,
+    TSPoint { row, column }
+}
+#[inline]
+pub(crate) unsafe extern "C" fn ts_subtree_named(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.named() as os::raw::c_int != 0
+    } else {
+        (*self_0.ptr).named() as os::raw::c_int != 0
     }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_named(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.named() as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_missing(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.is_missing() as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).named() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).is_missing() as os::raw::c_int != 0
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_missing(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.is_missing() as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_extra(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.extra() as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).is_missing() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).extra() as os::raw::c_int != 0
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_extra(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.extra() as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_has_changes(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.has_changes() as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).extra() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).has_changes() as os::raw::c_int != 0
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_has_changes(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.has_changes() as os::raw::c_int
-    } else {
-        (*self_0.ptr).has_changes() as os::raw::c_int
-    } != 0;
-}
-#[inline]
-pub unsafe extern "C" fn ts_subtree_error_cost(mut self_0: Subtree) -> u32 {
+pub(crate) unsafe extern "C" fn ts_subtree_error_cost(mut self_0: Subtree) -> u32 {
     if ts_subtree_missing(self_0) {
-        return (110 as os::raw::c_int + 500 as os::raw::c_int) as u32;
+        (110 as os::raw::c_int + 500 as os::raw::c_int) as u32
+    } else if self_0.data.is_inline() as os::raw::c_int != 0 {
+        0 as os::raw::c_int as os::raw::c_uint
     } else {
-        return if self_0.data.is_inline() as os::raw::c_int != 0 {
-            0 as os::raw::c_int as os::raw::c_uint
-        } else {
-            (*self_0.ptr).error_cost
-        };
+        (*self_0.ptr).error_cost
     }
 }
-pub unsafe extern "C" fn ts_subtree_visible(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.visible() as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_visible(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.visible() as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).visible() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).visible() as os::raw::c_int != 0
+    }
 }
-pub unsafe extern "C" fn ts_subtree_child_count(mut self_0: Subtree) -> u32 {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
+pub(crate) unsafe extern "C" fn ts_subtree_child_count(mut self_0: Subtree) -> u32 {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
         0 as os::raw::c_int as os::raw::c_uint
     } else {
         (*self_0.ptr).child_count
-    };
+    }
 }
-pub unsafe extern "C" fn length_add(mut len1: Length, mut len2: Length) -> Length {
-    let mut result: Length = Length {
-        bytes: 0,
-        extent: TSPoint { row: 0, column: 0 },
-    };
-    result.bytes = len1.bytes.wrapping_add(len2.bytes);
-    result.extent = point_add(len1.extent, len2.extent);
-    return result;
+pub(crate) unsafe extern "C" fn length_add(mut len1: Length, mut len2: Length) -> Length {
+    Length {
+        bytes: len1.bytes.wrapping_add(len2.bytes),
+        extent: point_add(len1.extent, len2.extent),
+    }
 }
-pub unsafe extern "C" fn ts_subtree_total_bytes(mut self_0: Subtree) -> u32 {
-    return ts_subtree_total_size(self_0).bytes;
+pub(crate) unsafe extern "C" fn ts_subtree_total_bytes(mut self_0: Subtree) -> u32 {
+    ts_subtree_total_size(self_0).bytes
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_total_size(mut self_0: Subtree) -> Length {
-    return length_add(ts_subtree_padding(self_0), ts_subtree_size(self_0));
+pub(crate) unsafe extern "C" fn ts_subtree_total_size(mut self_0: Subtree) -> Length {
+    length_add(ts_subtree_padding(self_0), ts_subtree_size(self_0))
 }
 #[inline]
-pub unsafe extern "C" fn point_lt(mut a: TSPoint, mut b: TSPoint) -> bool {
-    return a.row < b.row || a.row == b.row && a.column < b.column;
+pub(crate) unsafe extern "C" fn point_lt(mut a: TSPoint, mut b: TSPoint) -> bool {
+    a.row < b.row || a.row == b.row && a.column < b.column
 }
-pub unsafe extern "C" fn point_lte(mut a: TSPoint, mut b: TSPoint) -> bool {
-    return a.row < b.row || a.row == b.row && a.column <= b.column;
+pub(crate) unsafe extern "C" fn point_lte(mut a: TSPoint, mut b: TSPoint) -> bool {
+    a.row < b.row || a.row == b.row && a.column <= b.column
 }
 
-pub unsafe extern "C" fn ts_language_alias_sequence(
+pub(crate) unsafe extern "C" fn ts_language_alias_sequence(
     mut self_0: *const TSLanguage,
     mut production_id: u32,
 ) -> *const TSSymbol {
-    return if production_id > 0 as os::raw::c_int as os::raw::c_uint {
+    if production_id > 0 as os::raw::c_int as os::raw::c_uint {
         (*self_0).alias_sequences.offset(
             production_id.wrapping_mul((*self_0).max_alias_sequence_length as os::raw::c_uint)
                 as isize,
         )
     } else {
-        std::ptr::null::<TSSymbol>()
-    };
+        std::ptr::null()
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_field_map(
+pub(crate) unsafe extern "C" fn ts_language_field_map(
     mut self_0: *const TSLanguage,
     mut production_id: u32,
     mut start: *mut *const TSFieldMapEntry,
@@ -794,7 +786,7 @@ pub unsafe extern "C" fn ts_language_field_map(
 
 //TSTreeCursor
 #[inline]
-pub unsafe extern "C" fn ts_realloc(
+pub(crate) unsafe extern "C" fn ts_realloc(
     mut buffer: *mut ffi::c_void,
     mut size: usize,
 ) -> *mut ffi::c_void {
@@ -827,19 +819,19 @@ pub unsafe extern "C" fn ts_realloc(
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_visible_child_count(mut self_0: Subtree) -> u32 {
+pub(crate) unsafe extern "C" fn ts_subtree_visible_child_count(mut self_0: Subtree) -> u32 {
     if ts_subtree_child_count(self_0) > 0 as os::raw::c_int as os::raw::c_uint {
-        return (*self_0.ptr)
+        (*self_0.ptr)
             .c2rust_unnamed
             .c2rust_unnamed
-            .visible_child_count;
+            .visible_child_count
     } else {
-        return 0 as os::raw::c_int as u32;
-    };
+        0 as os::raw::c_int as u32
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn array__splice(
+pub(crate) unsafe extern "C" fn array__splice(
     mut self_0: *mut VoidArray,
     mut element_size: usize,
     mut index: u32,
@@ -858,8 +850,8 @@ pub unsafe extern "C" fn array__splice(
     let mut contents: *mut os::raw::c_char = (*self_0).contents as *mut os::raw::c_char;
     if (*self_0).size > old_end {
         ptr::copy(
-            contents.offset((old_end as usize).wrapping_mul(element_size) as isize),
-            contents.offset((new_end as usize).wrapping_mul(element_size) as isize),
+            contents.add((old_end as usize).wrapping_mul(element_size)),
+            contents.add((new_end as usize).wrapping_mul(element_size)),
             ((*self_0).size.wrapping_sub(old_end) as usize).wrapping_mul(element_size) as usize,
         );
     }
@@ -867,12 +859,12 @@ pub unsafe extern "C" fn array__splice(
         if !elements.is_null() {
             copy_nonoverlapping(
                 elements as *const os::raw::c_char,
-                contents.offset((index as usize).wrapping_mul(element_size) as isize),
+                contents.add((index as usize).wrapping_mul(element_size)),
                 (new_count as usize).wrapping_mul(element_size) as usize,
             );
         } else {
             write_bytes(
-                contents.offset((index as usize).wrapping_mul(element_size) as isize),
+                contents.add((index as usize).wrapping_mul(element_size)),
                 0,
                 (new_count as usize).wrapping_mul(element_size),
             );
@@ -883,14 +875,14 @@ pub unsafe extern "C" fn array__splice(
 }
 
 #[inline]
-pub unsafe extern "C" fn array__delete(mut self_0: *mut VoidArray) {
+pub(crate) unsafe extern "C" fn array__delete(mut self_0: *mut VoidArray) {
     ts_free((*self_0).contents);
-    (*self_0).contents = 0 as *mut ffi::c_void;
+    (*self_0).contents = ptr::null_mut();
     (*self_0).size = 0 as os::raw::c_int as u32;
     (*self_0).capacity = 0 as os::raw::c_int as u32;
 }
 #[inline]
-pub unsafe extern "C" fn array__reserve(
+pub(crate) unsafe extern "C" fn array__reserve(
     mut self_0: *mut VoidArray,
     mut element_size: usize,
     mut new_capacity: u32,
@@ -908,7 +900,7 @@ pub unsafe extern "C" fn array__reserve(
     };
 }
 #[inline]
-pub unsafe extern "C" fn array__grow(
+pub(crate) unsafe extern "C" fn array__grow(
     mut self_0: *mut VoidArray,
     mut count: usize,
     mut element_size: usize,
@@ -929,116 +921,113 @@ pub unsafe extern "C" fn array__grow(
 // Subtree
 
 #[inline]
-pub unsafe extern "C" fn atomic_inc(p: *const u32) -> u32 {
+pub(crate) unsafe extern "C" fn atomic_inc(p: *const u32) -> u32 {
     (&*(p as *const AtomicU32))
         .fetch_add(1, Ordering::SeqCst)
         .wrapping_add(1)
 }
 
 #[inline]
-pub unsafe extern "C" fn atomic_dec(mut p: *mut u32) -> u32 {
+pub(crate) unsafe extern "C" fn atomic_dec(mut p: *mut u32) -> u32 {
     (&*(p as *const AtomicU32))
         .fetch_sub(1, Ordering::SeqCst)
         .wrapping_sub(1)
 }
 
 #[inline]
-pub unsafe extern "C" fn length_sub(mut len1: Length, mut len2: Length) -> Length {
-    let mut result: Length = Length {
-        bytes: 0,
-        extent: TSPoint { row: 0, column: 0 },
-    };
-    result.bytes = len1.bytes.wrapping_sub(len2.bytes);
-    result.extent = point_sub(len1.extent, len2.extent);
-    return result;
+pub(crate) unsafe extern "C" fn length_sub(mut len1: Length, mut len2: Length) -> Length {
+    Length {
+        bytes: len1.bytes.wrapping_sub(len2.bytes),
+        extent: point_sub(len1.extent, len2.extent),
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_has_external_tokens(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_has_external_tokens(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        0 as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).has_external_tokens() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).has_external_tokens() as os::raw::c_int != 0
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_repeat_depth(mut self_0: Subtree) -> u32 {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
+pub(crate) unsafe extern "C" fn ts_subtree_repeat_depth(mut self_0: Subtree) -> u32 {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
         0 as os::raw::c_int as os::raw::c_uint
     } else {
         (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.repeat_depth
-    };
+    }
 }
 
-pub unsafe extern "C" fn ts_subtree_fragile_right(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_fragile_right(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        0 as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).fragile_right() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).fragile_right() as os::raw::c_int != 0
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_fragile_left(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_fragile_left(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        0 as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).fragile_left() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).fragile_left() as os::raw::c_int != 0
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_leaf_parse_state(mut self_0: Subtree) -> TSStateId {
+pub(crate) unsafe extern "C" fn ts_subtree_leaf_parse_state(mut self_0: Subtree) -> TSStateId {
     if self_0.data.is_inline() {
-        return self_0.data.parse_state;
-    }
-    if (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint {
-        return (*self_0.ptr).parse_state;
-    }
-    return (*self_0.ptr)
-        .c2rust_unnamed
-        .c2rust_unnamed
-        .first_leaf
-        .parse_state;
-}
-
-#[inline]
-pub unsafe extern "C" fn ts_subtree_leaf_symbol(mut self_0: Subtree) -> TSSymbol {
-    if self_0.data.is_inline() {
-        return self_0.data.symbol as TSSymbol;
-    }
-    if (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint {
-        return (*self_0.ptr).symbol;
-    }
-    return (*self_0.ptr)
-        .c2rust_unnamed
-        .c2rust_unnamed
-        .first_leaf
-        .symbol;
-}
-
-#[inline]
-pub unsafe extern "C" fn ts_subtree_parse_state(mut self_0: Subtree) -> TSStateId {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.parse_state as os::raw::c_int
+        self_0.data.parse_state
+    } else if (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint {
+        (*self_0.ptr).parse_state
     } else {
-        (*self_0.ptr).parse_state as os::raw::c_int
-    } as TSStateId;
+        (*self_0.ptr)
+            .c2rust_unnamed
+            .c2rust_unnamed
+            .first_leaf
+            .parse_state
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_node_count(mut self_0: Subtree) -> u32 {
-    return if self_0.data.is_inline() as os::raw::c_int != 0
+pub(crate) unsafe extern "C" fn ts_subtree_leaf_symbol(mut self_0: Subtree) -> TSSymbol {
+    if self_0.data.is_inline() {
+        self_0.data.symbol as TSSymbol
+    } else if (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint {
+        (*self_0.ptr).symbol
+    } else {
+        (*self_0.ptr)
+            .c2rust_unnamed
+            .c2rust_unnamed
+            .first_leaf
+            .symbol
+    }
+}
+
+#[inline]
+pub(crate) unsafe extern "C" fn ts_subtree_parse_state(mut self_0: Subtree) -> TSStateId {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.parse_state as os::raw::c_int as TSStateId
+    } else {
+        (*self_0.ptr).parse_state as os::raw::c_int as TSStateId
+    }
+}
+
+#[inline]
+pub(crate) unsafe extern "C" fn ts_subtree_node_count(mut self_0: Subtree) -> u32 {
+    if self_0.data.is_inline() as os::raw::c_int != 0
         || (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint
     {
         1 as os::raw::c_int as os::raw::c_uint
     } else {
         (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.node_count
-    };
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_dynamic_precedence(mut self_0: Subtree) -> i32 {
-    return if self_0.data.is_inline() as os::raw::c_int != 0
+pub(crate) unsafe extern "C" fn ts_subtree_dynamic_precedence(mut self_0: Subtree) -> i32 {
+    if self_0.data.is_inline() as os::raw::c_int != 0
         || (*self_0.ptr).child_count == 0 as os::raw::c_int as os::raw::c_uint
     {
         0 as os::raw::c_int
@@ -1047,68 +1036,44 @@ pub unsafe extern "C" fn ts_subtree_dynamic_precedence(mut self_0: Subtree) -> i
             .c2rust_unnamed
             .c2rust_unnamed
             .dynamic_precedence
-    };
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_lookahead_bytes(mut self_0: Subtree) -> u32 {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
+pub(crate) unsafe extern "C" fn ts_subtree_lookahead_bytes(mut self_0: Subtree) -> u32 {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
         self_0.data.lookahead_bytes() as os::raw::c_uint
     } else {
         (*self_0.ptr).lookahead_bytes
-    };
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_production_id(mut self_0: Subtree) -> u16 {
+pub(crate) unsafe extern "C" fn ts_subtree_production_id(mut self_0: Subtree) -> u16 {
     if ts_subtree_child_count(self_0) > 0 as os::raw::c_int as os::raw::c_uint {
-        return (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.production_id;
+        (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.production_id
     } else {
-        return 0 as os::raw::c_int as u16;
-    };
+        0 as os::raw::c_int as u16
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_is_error(mut self_0: Subtree) -> bool {
-    return ts_subtree_symbol(self_0) as os::raw::c_int
-        == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int;
+pub(crate) unsafe extern "C" fn ts_subtree_is_error(mut self_0: Subtree) -> bool {
+    ts_subtree_symbol(self_0) as os::raw::c_int
+        == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_from_mut(mut self_0: MutableSubtree) -> Subtree {
-    let mut result: Subtree = Subtree {
-        data: SubtreeInlineData {
-            is_inline_visible_named_extra_has_changes_is_missing_is_keyword: [0; 1],
-            symbol: 0,
-            padding_bytes: 0,
-            size_bytes: 0,
-            padding_columns: 0,
-            padding_rows_lookahead_bytes: [0; 1],
-            parse_state: 0,
-        },
-    };
-    result.data = self_0.data;
-    return result;
+pub(crate) unsafe extern "C" fn ts_subtree_from_mut(mut self_0: MutableSubtree) -> Subtree {
+    Subtree { data: self_0.data }
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_to_mut_unsafe(mut self_0: Subtree) -> MutableSubtree {
-    let mut result: MutableSubtree = MutableSubtree {
-        data: SubtreeInlineData {
-            is_inline_visible_named_extra_has_changes_is_missing_is_keyword: [0; 1],
-            symbol: 0,
-            padding_bytes: 0,
-            size_bytes: 0,
-            padding_columns: 0,
-            padding_rows_lookahead_bytes: [0; 1],
-            parse_state: 0,
-        },
-    };
-    result.data = self_0.data;
-    return result;
+pub(crate) unsafe extern "C" fn ts_subtree_to_mut_unsafe(mut self_0: Subtree) -> MutableSubtree {
+    MutableSubtree { data: self_0.data }
 }
 
 // Stack
 #[inline]
-pub unsafe extern "C" fn array__erase(
+pub(crate) unsafe extern "C" fn array__erase(
     mut self_0: *mut VoidArray,
     mut element_size: usize,
     mut index: u32,
@@ -1130,26 +1095,27 @@ pub unsafe extern "C" fn array__erase(
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_toggle_allocation_recording(mut _value: bool) -> bool {
-    return 0 as os::raw::c_int != 0;
+pub(crate) unsafe extern "C" fn ts_toggle_allocation_recording(mut _value: bool) -> bool {
+    0 as os::raw::c_int != 0
 }
 
 // Query
 #[inline]
-pub unsafe extern "C" fn count_leading_zeros(mut x: u32) -> u32 {
+pub(crate) unsafe extern "C" fn count_leading_zeros(mut x: u32) -> u32 {
     if x == 0 as os::raw::c_int as os::raw::c_uint {
-        return 32 as os::raw::c_int as u32;
+        32 as os::raw::c_int as u32
+    } else {
+        x.leading_zeros() as i32 as u32
     }
-    return x.leading_zeros() as i32 as u32;
 }
 
 #[inline]
-pub unsafe extern "C" fn bitmask_for_index(mut id: u16) -> u32 {
-    return (1 as os::raw::c_uint) << 31 as os::raw::c_int - id as os::raw::c_int;
+pub(crate) unsafe extern "C" fn bitmask_for_index(mut id: u16) -> u32 {
+    (1 as os::raw::c_uint) << (31 as os::raw::c_int - id as os::raw::c_int)
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_decode_utf8(
+pub(crate) unsafe extern "C" fn ts_decode_utf8(
     mut string: *const u8,
     mut length: u32,
     mut code_point: *mut i32,
@@ -1158,16 +1124,16 @@ pub unsafe extern "C" fn ts_decode_utf8(
     let fresh0 = i;
     i = i.wrapping_add(1);
     *code_point = *string.offset(fresh0 as isize) as i32;
-    if !(*code_point & 0x80 as os::raw::c_int == 0 as os::raw::c_int) {
+    if *code_point & 0x80 as os::raw::c_int != 0 as os::raw::c_int {
         let mut __t: u8 = 0 as os::raw::c_int as u8;
         if !(i != length
             && (if *code_point >= 0xe0 as os::raw::c_int {
                 ((if *code_point < 0xf0 as os::raw::c_int {
                     *code_point &= 0xf as os::raw::c_int;
                     __t = *string.offset(i as isize);
-                    ((*::std::mem::transmute::<&[u8; 17], &[os::raw::c_char; 17]>(
-                        b" 000000000000\x1000\x00",
-                    ))[*code_point as usize] as os::raw::c_int
+                    ((*(b" 000000000000\x1000\x00" as *const [u8; 17]
+                        as *const [os::raw::c_char; 17]))[*code_point as usize]
+                        as os::raw::c_int
                         & (1 as os::raw::c_int) << (__t as os::raw::c_int >> 5 as os::raw::c_int)
                         != 0
                         && {
@@ -1179,19 +1145,12 @@ pub unsafe extern "C" fn ts_decode_utf8(
                     (*code_point <= 4 as os::raw::c_int
                         && {
                             __t = *string.offset(i as isize);
-                            ((*::std::mem::transmute::<&[u8; 17],
-                                                                &[os::raw::c_char; 17]>(b"\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x0f\x0f\x0f\x00\x00\x00\x00\x00"))[(__t
-                                                                                                                                                                    as
-                                                                                                                                                                    os::raw::c_int
-                                                                                                                                                                    >>
-                                                                                                                                                                    4
-                                                                                                                                                                        as
-                                                                                                                                                                        os::raw::c_int)
-                                                                                                                                                                   as
-                                                                                                                                                                   usize]
-                                          as os::raw::c_int &
-                                          (1 as os::raw::c_int) << *code_point)
-                                         != 0
+                            ((*(b"\0\0\0\0\0\0\0\0\x1e\x0f\x0f\x0f\0\0\0\0\0" as *const [u8; 17]
+                                as *const [os::raw::c_char; 17]))
+                                [(__t as os::raw::c_int >> 4) as usize]
+                                as os::raw::c_int
+                                & (1 as os::raw::c_int) << *code_point)
+                                != 0
                         }
                         && {
                             *code_point = *code_point << 6 as os::raw::c_int
@@ -1229,43 +1188,44 @@ pub unsafe extern "C" fn ts_decode_utf8(
             *code_point = -(1 as os::raw::c_int)
         }
     }
-    return i;
+    i
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_is_keyword(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        self_0.data.is_keyword() as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_is_keyword(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        self_0.data.is_keyword() as os::raw::c_int != 0
     } else {
-        (*self_0.ptr).is_keyword() as os::raw::c_int
-    } != 0;
+        (*self_0.ptr).is_keyword() as os::raw::c_int != 0
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_set_extra(mut self_0: *mut MutableSubtree) {
+pub(crate) unsafe extern "C" fn ts_subtree_set_extra(mut self_0: *mut MutableSubtree) {
     if (*self_0).data.is_inline() {
         (*self_0).data.set_extra(1 as os::raw::c_int != 0)
     } else {
         (*(*self_0).ptr).set_extra(1 as os::raw::c_int != 0)
-    };
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_subtree_is_eof(mut self_0: Subtree) -> bool {
-    return ts_subtree_symbol(self_0) as os::raw::c_int == 0 as os::raw::c_int;
+pub(crate) unsafe extern "C" fn ts_subtree_is_eof(mut self_0: Subtree) -> bool {
+    ts_subtree_symbol(self_0) as os::raw::c_int == 0 as os::raw::c_int
 }
 #[inline]
-pub unsafe extern "C" fn ts_subtree_is_fragile(mut self_0: Subtree) -> bool {
-    return if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int
+pub(crate) unsafe extern "C" fn ts_subtree_is_fragile(mut self_0: Subtree) -> bool {
+    if self_0.data.is_inline() as os::raw::c_int != 0 {
+        0 as os::raw::c_int != 0
     } else {
         ((*self_0.ptr).fragile_left() as os::raw::c_int != 0
             || (*self_0.ptr).fragile_right() as os::raw::c_int != 0) as os::raw::c_int
-    } != 0;
+            != 0
+    }
 }
 
 #[inline]
-pub unsafe extern "C" fn ts_language_actions(
+pub(crate) unsafe extern "C" fn ts_language_actions(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -1278,10 +1238,10 @@ pub unsafe extern "C" fn ts_language_actions(
     };
     ts_language_table_entry(self_0, state, symbol, &mut entry);
     *count = entry.action_count;
-    return entry.actions;
+    entry.actions
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_has_actions(
+pub(crate) unsafe extern "C" fn ts_language_has_actions(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -1292,10 +1252,10 @@ pub unsafe extern "C" fn ts_language_has_actions(
         is_reusable: false,
     };
     ts_language_table_entry(self_0, state, symbol, &mut entry);
-    return entry.action_count > 0 as os::raw::c_int as os::raw::c_uint;
+    entry.action_count > 0 as os::raw::c_int as os::raw::c_uint
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_has_reduce_action(
+pub(crate) unsafe extern "C" fn ts_language_has_reduce_action(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -1306,12 +1266,12 @@ pub unsafe extern "C" fn ts_language_has_reduce_action(
         is_reusable: false,
     };
     ts_language_table_entry(self_0, state, symbol, &mut entry);
-    return entry.action_count > 0 as os::raw::c_int as os::raw::c_uint
+    entry.action_count > 0 as os::raw::c_int as os::raw::c_uint
         && (*entry.actions.offset(0 as os::raw::c_int as isize)).type_0() as os::raw::c_int
-            == TSParseActionTypeReduce as os::raw::c_int;
+            == TSParseActionTypeReduce as os::raw::c_int
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_lookup(
+pub(crate) unsafe extern "C" fn ts_language_lookup(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -1346,17 +1306,17 @@ pub unsafe extern "C" fn ts_language_lookup(
             }
             i = i.wrapping_add(1)
         }
-        return 0 as os::raw::c_int as u16;
+        0 as os::raw::c_int as u16
     } else {
-        return *(*self_0).parse_table.offset(
+        *(*self_0).parse_table.offset(
             (state as os::raw::c_uint)
                 .wrapping_mul((*self_0).symbol_count)
                 .wrapping_add(symbol as os::raw::c_uint) as isize,
-        );
-    };
+        )
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_next_state(
+pub(crate) unsafe extern "C" fn ts_language_next_state(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -1365,7 +1325,7 @@ pub unsafe extern "C" fn ts_language_next_state(
         || symbol as os::raw::c_int
             == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
-        return 0 as os::raw::c_int as TSStateId;
+        0 as os::raw::c_int as TSStateId
     } else if (symbol as os::raw::c_uint) < (*self_0).token_count {
         let mut count: u32 = 0;
         let mut actions: *const TSParseAction =
@@ -1380,28 +1340,28 @@ pub unsafe extern "C" fn ts_language_next_state(
                 } as TSStateId;
             }
         }
-        return 0 as os::raw::c_int as TSStateId;
+        0 as os::raw::c_int as TSStateId
     } else {
-        return ts_language_lookup(self_0, state, symbol);
-    };
+        ts_language_lookup(self_0, state, symbol)
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_language_enabled_external_tokens(
+pub(crate) unsafe extern "C" fn ts_language_enabled_external_tokens(
     mut self_0: *const TSLanguage,
     mut external_scanner_state: os::raw::c_uint,
 ) -> *const bool {
     if external_scanner_state == 0 as os::raw::c_int as os::raw::c_uint {
-        return std::ptr::null::<bool>();
+        ptr::null()
     } else {
-        return (*self_0).external_scanner.states.offset(
+        (*self_0).external_scanner.states.offset(
             (*self_0)
                 .external_token_count
                 .wrapping_mul(external_scanner_state) as isize,
-        );
-    };
+        )
+    }
 }
 #[inline]
-pub unsafe extern "C" fn ts_reduce_action_set_add(
+pub(crate) unsafe extern "C" fn ts_reduce_action_set_add(
     mut self_0: *mut ReduceActionSet,
     mut new_action: ReduceAction,
 ) {
@@ -1426,14 +1386,14 @@ pub unsafe extern "C" fn ts_reduce_action_set_add(
 }
 
 #[inline]
-pub unsafe extern "C" fn atomic_load(mut p: *const usize) -> usize {
+pub(crate) unsafe extern "C" fn atomic_load(mut p: *const usize) -> usize {
     (&*(p as *const AtomicUsize)).load(Ordering::SeqCst) as usize
 }
 
 // Lexer
 
 #[inline]
-pub unsafe extern "C" fn ts_decode_utf16(
+pub(crate) unsafe extern "C" fn ts_decode_utf16(
     mut string: *const u8,
     mut length: u32,
     mut code_point: *mut i32,
@@ -1447,13 +1407,13 @@ pub unsafe extern "C" fn ts_decode_utf16(
     let string = string as *mut u16;
 
     *code_point = *(string as *mut u16).offset(fresh1 as isize) as i32;
-    if *code_point as os::raw::c_uint & 0xfffffc00 as os::raw::c_uint
+    if *code_point as os::raw::c_uint & 0xffff_fc00 as os::raw::c_uint
         == 0xd800 as os::raw::c_int as os::raw::c_uint
     {
         let mut __c2: u16 = 0;
         if i != length && {
             __c2 = *(string as *mut u16).offset(i as isize);
-            (__c2 as os::raw::c_uint & 0xfffffc00 as os::raw::c_uint)
+            (__c2 as os::raw::c_uint & 0xffff_fc00 as os::raw::c_uint)
                 == 0xdc00 as os::raw::c_int as os::raw::c_uint
         } {
             i = i.wrapping_add(1);
@@ -1463,17 +1423,21 @@ pub unsafe extern "C" fn ts_decode_utf16(
                     - 0x10000 as os::raw::c_int)
         }
     }
-    return i.wrapping_mul(2);
+    i.wrapping_mul(2)
 }
 
 #[inline]
-pub unsafe extern "C" fn length_is_undefined(mut length: Length) -> bool {
-    return length.bytes == 0 as os::raw::c_int as os::raw::c_uint
-        && length.extent.column != 0 as os::raw::c_int as os::raw::c_uint;
+pub(crate) unsafe extern "C" fn length_is_undefined(mut length: Length) -> bool {
+    length.bytes == 0 as os::raw::c_int as os::raw::c_uint
+        && length.extent.column != 0 as os::raw::c_int as os::raw::c_uint
 }
 
 // get_changed_ranges
 #[inline]
-pub unsafe extern "C" fn length_min(mut len1: Length, mut len2: Length) -> Length {
-    return if len1.bytes < len2.bytes { len1 } else { len2 };
+pub(crate) unsafe extern "C" fn length_min(mut len1: Length, mut len2: Length) -> Length {
+    if len1.bytes < len2.bytes {
+        len1
+    } else {
+        len2
+    }
 }
