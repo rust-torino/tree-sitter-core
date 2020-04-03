@@ -290,3 +290,71 @@ jobs:
     - name: Stop sccache server
       run: |
         sccache --stop-server
+
+  windows-tests:
+
+    env:
+      RUST_BACKTRACE: 1
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 1.3G
+      SCCACHE_DIR: C:\sccache
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install sccache
+      run: |
+        $LINK="https://github.com/mozilla/sccache/releases/download/0.2.12"
+        $SCCACHE_FILE="sccache-0.2.12-x86_64-pc-windows-msvc"
+        curl -LO "$LINK/$SCCACHE_FILE.tar.gz"
+        tar xzf "$SCCACHE_FILE.tar.gz"
+        echo "::add-path::$Env:GITHUB_WORKSPACE/$SCCACHE_FILE"
+
+    - name: Install stable
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/cache
+        key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          cargo-registry-
+
+    - name: Cache sccache output
+      uses: actions/cache@v1
+      with:
+        path: C:\sccache
+        key: sccache-${{ hashFiles('**/Cargo.*') }}
+        restore-keys: |
+          sccache-
+
+    - name: Cache data tests
+      uses: actions/cache@v1
+      with:
+        path: tree-sitter-tests/data
+        key: data-${{ hashFiles('**/Cargo.*') }}
+        restore-keys: |
+          data-
+
+    - name: Start sccache server
+      run: |
+        sccache --start-server
+
+    - name: Run no-default-features tests
+      run: |
+        cargo test --no-default-features
+
+    - name: Run all-features tests
+      run: |
+        cargo test --all-features
+
+    - name: Stop sccache server
+      run: |
+        sccache --stop-server
