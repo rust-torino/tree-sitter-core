@@ -193,7 +193,7 @@ jobs:
       if: matrix.conf != 'cargo-c'
       uses: actions/cache@v1
       with:
-        path: tree-sitter-tests/data
+        path: data
         key: data-${{ hashFiles('**/Cargo.*') }}
         restore-keys: |
           data-
@@ -270,7 +270,7 @@ jobs:
     - name: Cache data tests
       uses: actions/cache@v1
       with:
-        path: tree-sitter-tests/data
+        path: data
         key: data-${{ hashFiles('**/Cargo.*') }}
         restore-keys: |
           data-
