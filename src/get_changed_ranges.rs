@@ -1,6 +1,6 @@
 use crate::*;
 
-use std::os;
+use std::{cmp::Ordering, os};
 
 // #define DEBUG_GET_CHANGED_RANGES
 unsafe extern "C" fn ts_range_array_add(
@@ -26,14 +26,11 @@ unsafe extern "C" fn ts_range_array_add(
         }
     }
     if start.bytes < end.bytes {
-        let mut range: TSRange = {
-            let mut init = TSRange {
-                start_point: start.extent,
-                end_point: end.extent,
-                start_byte: start.bytes,
-                end_byte: end.bytes,
-            };
-            init
+        let mut range = TSRange {
+            start_point: start.extent,
+            end_point: end.extent,
+            start_byte: start.bytes,
+            end_byte: end.bytes,
         };
         array__grow(
             self_0 as *mut VoidArray,
@@ -46,7 +43,7 @@ unsafe extern "C" fn ts_range_array_add(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_range_array_intersects(
+pub(crate) unsafe extern "C" fn ts_range_array_intersects(
     mut self_0: *const TSRangeArray,
     mut start_index: os::raw::c_uint,
     mut start_byte: u32,
@@ -64,10 +61,10 @@ pub unsafe extern "C" fn ts_range_array_intersects(
             i = i.wrapping_add(1)
         }
     }
-    return 0 as os::raw::c_int != 0;
+    false
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_range_array_get_changed_ranges(
+pub(crate) unsafe extern "C" fn ts_range_array_get_changed_ranges(
     mut old_ranges: *const TSRange,
     mut old_range_count: os::raw::c_uint,
     mut new_ranges: *const TSRange,
@@ -89,78 +86,70 @@ pub unsafe extern "C" fn ts_range_array_get_changed_ranges(
             extent: TSPoint { row: 0, column: 0 },
         };
         if in_old_range {
-            next_old_position = {
-                let mut init = Length {
-                    bytes: (*old_range).end_byte,
-                    extent: (*old_range).end_point,
-                };
-                init
-            }
+            next_old_position = Length {
+                bytes: (*old_range).end_byte,
+                extent: (*old_range).end_point,
+            };
         } else if old_index < old_range_count {
-            next_old_position = {
-                let mut init = Length {
-                    bytes: (*old_range).start_byte,
-                    extent: (*old_range).start_point,
-                };
-                init
-            }
+            next_old_position = Length {
+                bytes: (*old_range).start_byte,
+                extent: (*old_range).start_point,
+            };
         } else {
             next_old_position = LENGTH_MAX
         }
-        let mut next_new_position: Length = Length {
+        let mut next_new_position = Length {
             bytes: 0,
             extent: TSPoint { row: 0, column: 0 },
         };
         if in_new_range {
-            next_new_position = {
-                let mut init = Length {
-                    bytes: (*new_range).end_byte,
-                    extent: (*new_range).end_point,
-                };
-                init
-            }
+            next_new_position = Length {
+                bytes: (*new_range).end_byte,
+                extent: (*new_range).end_point,
+            };
         } else if new_index < new_range_count {
-            next_new_position = {
-                let mut init = Length {
-                    bytes: (*new_range).start_byte,
-                    extent: (*new_range).start_point,
-                };
-                init
-            }
+            next_new_position = Length {
+                bytes: (*new_range).start_byte,
+                extent: (*new_range).start_point,
+            };
         } else {
             next_new_position = LENGTH_MAX
         }
-        if next_old_position.bytes < next_new_position.bytes {
-            if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
-                ts_range_array_add(differences, current_position, next_old_position);
+        match next_old_position.bytes.cmp(&next_new_position.bytes) {
+            Ordering::Less => {
+                if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
+                    ts_range_array_add(differences, current_position, next_old_position);
+                }
+                if in_old_range {
+                    old_index = old_index.wrapping_add(1)
+                }
+                current_position = next_old_position;
+                in_old_range = !in_old_range
             }
-            if in_old_range {
-                old_index = old_index.wrapping_add(1)
+            Ordering::Greater => {
+                if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
+                    ts_range_array_add(differences, current_position, next_new_position);
+                }
+                if in_new_range {
+                    new_index = new_index.wrapping_add(1)
+                }
+                current_position = next_new_position;
+                in_new_range = !in_new_range
             }
-            current_position = next_old_position;
-            in_old_range = !in_old_range
-        } else if next_new_position.bytes < next_old_position.bytes {
-            if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
-                ts_range_array_add(differences, current_position, next_new_position);
+            Ordering::Equal => {
+                if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
+                    ts_range_array_add(differences, current_position, next_new_position);
+                }
+                if in_old_range {
+                    old_index = old_index.wrapping_add(1)
+                }
+                if in_new_range {
+                    new_index = new_index.wrapping_add(1)
+                }
+                in_old_range = !in_old_range;
+                in_new_range = !in_new_range;
+                current_position = next_new_position
             }
-            if in_new_range {
-                new_index = new_index.wrapping_add(1)
-            }
-            current_position = next_new_position;
-            in_new_range = !in_new_range
-        } else {
-            if in_old_range as os::raw::c_int != in_new_range as os::raw::c_int {
-                ts_range_array_add(differences, current_position, next_new_position);
-            }
-            if in_old_range {
-                old_index = old_index.wrapping_add(1)
-            }
-            if in_new_range {
-                new_index = new_index.wrapping_add(1)
-            }
-            in_old_range = !in_old_range;
-            in_new_range = !in_new_range;
-            current_position = next_new_position
         }
     }
 }
@@ -177,27 +166,22 @@ unsafe extern "C" fn iterator_new(
     );
     let fresh1 = (*cursor).stack.size;
     (*cursor).stack.size = (*cursor).stack.size.wrapping_add(1);
-    *(*cursor).stack.contents.offset(fresh1 as isize) = {
-        let mut init = TreeCursorEntry {
-            subtree: tree,
-            position: length_zero(),
-            child_index: 0 as os::raw::c_int as u32,
-            structural_child_index: 0 as os::raw::c_int as u32,
-        };
-        init
+    *(*cursor).stack.contents.offset(fresh1 as isize) = TreeCursorEntry {
+        subtree: tree,
+        position: length_zero(),
+        child_index: 0 as os::raw::c_int as u32,
+        structural_child_index: 0 as os::raw::c_int as u32,
     };
-    return {
-        let mut init = Iterator_0 {
-            cursor: *cursor,
-            language: language,
-            visible_depth: 1 as os::raw::c_int as os::raw::c_uint,
-            in_padding: 0 as os::raw::c_int != 0,
-        };
-        init
-    };
+
+    Iterator_0 {
+        cursor: *cursor,
+        language,
+        visible_depth: 1 as os::raw::c_int as os::raw::c_uint,
+        in_padding: 0 as os::raw::c_int != 0,
+    }
 }
 unsafe extern "C" fn iterator_done(mut self_0: *mut Iterator_0) -> bool {
-    return (*self_0).cursor.stack.size == 0 as os::raw::c_int as os::raw::c_uint;
+    (*self_0).cursor.stack.size == 0 as os::raw::c_int as os::raw::c_uint
 }
 unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Length {
     assert!(
@@ -215,10 +199,10 @@ unsafe extern "C" fn iterator_start_position(mut self_0: *mut Iterator_0) -> Len
         .offset((*self_0).cursor.stack.size.wrapping_sub(1) as isize)
         as *mut TreeCursorEntry);
     if (*self_0).in_padding {
-        return entry.position;
+        entry.position
     } else {
-        return length_add(entry.position, ts_subtree_padding(*entry.subtree));
-    };
+        length_add(entry.position, ts_subtree_padding(*entry.subtree))
+    }
 }
 unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Length {
     assert!(
@@ -237,10 +221,10 @@ unsafe extern "C" fn iterator_end_position(mut self_0: *mut Iterator_0) -> Lengt
         as *mut TreeCursorEntry);
     let mut result: Length = length_add(entry.position, ts_subtree_padding(*entry.subtree));
     if (*self_0).in_padding {
-        return result;
+        result
     } else {
-        return length_add(result, ts_subtree_size(*entry.subtree));
-    };
+        length_add(result, ts_subtree_size(*entry.subtree))
+    }
 }
 unsafe extern "C" fn iterator_tree_is_visible(mut self_0: *const Iterator_0) -> bool {
     assert!(
@@ -275,7 +259,7 @@ unsafe extern "C" fn iterator_tree_is_visible(mut self_0: *const Iterator_0) -> 
             && *alias_sequence.offset(entry.structural_child_index as isize) as os::raw::c_int
                 != 0 as os::raw::c_int;
     }
-    return 0 as os::raw::c_int != 0;
+    false
 }
 unsafe extern "C" fn iterator_get_visible_state(
     mut self_0: *const Iterator_0,
@@ -387,14 +371,11 @@ unsafe extern "C" fn iterator_descend(mut self_0: *mut Iterator_0, mut goal_posi
                 );
                 let fresh2 = (*self_0).cursor.stack.size;
                 (*self_0).cursor.stack.size = (*self_0).cursor.stack.size.wrapping_add(1);
-                *(*self_0).cursor.stack.contents.offset(fresh2 as isize) = {
-                    let mut init = TreeCursorEntry {
-                        subtree: child,
-                        position: position,
-                        child_index: i,
-                        structural_child_index: structural_child_index,
-                    };
-                    init
+                *(*self_0).cursor.stack.contents.offset(fresh2 as isize) = TreeCursorEntry {
+                    subtree: child,
+                    position,
+                    child_index: i,
+                    structural_child_index,
                 };
                 if iterator_tree_is_visible(self_0) {
                     if child_left.bytes > goal_position {
@@ -418,7 +399,7 @@ unsafe extern "C" fn iterator_descend(mut self_0: *mut Iterator_0, mut goal_posi
             break;
         }
     }
-    return 0 as os::raw::c_int != 0;
+    false
 }
 unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
     if (*self_0).in_padding {
@@ -459,7 +440,7 @@ unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
             as *mut TreeCursorEntry))
             .subtree;
         let mut child_index: u32 = entry.child_index.wrapping_add(1);
-        if !(ts_subtree_child_count(*parent) > child_index) {
+        if ts_subtree_child_count(*parent) <= child_index {
             continue;
         }
         let mut position: Length =
@@ -481,14 +462,11 @@ unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
         );
         let fresh3 = (*self_0).cursor.stack.size;
         (*self_0).cursor.stack.size = (*self_0).cursor.stack.size.wrapping_add(1);
-        *(*self_0).cursor.stack.contents.offset(fresh3 as isize) = {
-            let mut init = TreeCursorEntry {
-                subtree: next_child,
-                position: position,
-                child_index: child_index,
-                structural_child_index: structural_child_index,
-            };
-            init
+        *(*self_0).cursor.stack.contents.offset(fresh3 as isize) = TreeCursorEntry {
+            subtree: next_child,
+            position,
+            child_index,
+            structural_child_index,
         };
         if iterator_tree_is_visible(self_0) {
             if ts_subtree_padding(*next_child).bytes > 0 as os::raw::c_int as os::raw::c_uint {
@@ -557,10 +535,10 @@ unsafe extern "C" fn iterator_compare(
             return IteratorMayDiffer;
         }
     }
-    return IteratorDiffers;
+    IteratorDiffers
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
+pub(crate) unsafe extern "C" fn ts_subtree_get_changed_ranges(
     mut old_tree: *const Subtree,
     mut new_tree: *const Subtree,
     mut cursor1: *mut TreeCursor,
@@ -569,13 +547,10 @@ pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
     mut included_range_differences: *const TSRangeArray,
     mut ranges: *mut *mut TSRange,
 ) -> os::raw::c_uint {
-    let mut results: TSRangeArray = {
-        let mut init = TSRangeArray {
-            contents: std::ptr::null_mut::<TSRange>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    let mut results = TSRangeArray {
+        contents: std::ptr::null_mut::<TSRange>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     let mut old_iter: Iterator_0 = iterator_new(cursor1, old_tree, language);
     let mut new_iter: Iterator_0 = iterator_new(cursor2, new_tree, language);
@@ -583,16 +558,20 @@ pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
         0 as os::raw::c_int as os::raw::c_uint;
     let mut position: Length = iterator_start_position(&mut old_iter);
     let mut next_position: Length = iterator_start_position(&mut new_iter);
-    if position.bytes < next_position.bytes {
-        ts_range_array_add(&mut results, position, next_position);
-        position = next_position
-    } else if position.bytes > next_position.bytes {
-        ts_range_array_add(&mut results, next_position, position);
-        next_position = position
+    match position.bytes.cmp(&next_position.bytes) {
+        Ordering::Less => {
+            ts_range_array_add(&mut results, position, next_position);
+            position = next_position
+        }
+        Ordering::Greater => {
+            ts_range_array_add(&mut results, next_position, position);
+            next_position = position
+        }
+        Ordering::Equal => {}
     }
     loop {
         // Compare the old and new subtrees.
-        let mut comparison: IteratorComparison = iterator_compare(&mut old_iter, &mut new_iter);
+        let mut comparison: IteratorComparison = iterator_compare(&old_iter, &new_iter);
         // Even if the two subtrees appear to be identical, they could differ
         // internally if they contain a range of text that was previously
         // excluded from the parse, and is now included, or vice-versa.
@@ -672,7 +651,7 @@ pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
                 .contents
                 .offset(included_range_difference_index as isize)
                 as *mut TSRange;
-            if !((*range).end_byte <= position.bytes) {
+            if (*range).end_byte > position.bytes {
                 break;
             }
             included_range_difference_index = included_range_difference_index.wrapping_add(1)
@@ -683,13 +662,17 @@ pub unsafe extern "C" fn ts_subtree_get_changed_ranges(
     }
     let mut old_size: Length = ts_subtree_total_size(*old_tree);
     let mut new_size: Length = ts_subtree_total_size(*new_tree);
-    if old_size.bytes < new_size.bytes {
-        ts_range_array_add(&mut results, old_size, new_size);
-    } else if new_size.bytes < old_size.bytes {
-        ts_range_array_add(&mut results, new_size, old_size);
+    match old_size.bytes.cmp(&new_size.bytes) {
+        Ordering::Less => {
+            ts_range_array_add(&mut results, old_size, new_size);
+        }
+        Ordering::Greater => {
+            ts_range_array_add(&mut results, new_size, old_size);
+        }
+        Ordering::Equal => {}
     }
     *cursor1 = old_iter.cursor;
     *cursor2 = new_iter.cursor;
     *ranges = results.contents;
-    return results.size;
+    results.size
 }
