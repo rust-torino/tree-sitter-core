@@ -1,7 +1,6 @@
-pub(crate) use crate::get_changed_ranges::*;
+pub(crate) use crate::{get_changed_ranges::*, lexer::*};
 pub use crate::{
-    language::*, lexer::*, node::*, parser::*, query::*, stack::*, subtree::*, tree::*,
-    tree_cursor::*,
+    language::*, node::*, parser::*, query::*, stack::*, subtree::*, tree::*, tree_cursor::*,
 };
 
 use once_cell::sync::Lazy;
