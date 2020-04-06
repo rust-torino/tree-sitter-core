@@ -1,10 +1,10 @@
 use crate::{util::strncmp, *};
 
-use std::os;
+use std::{os, ptr};
 
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_symbol_count(mut self_0: *const TSLanguage) -> u32 {
-    return (*self_0).symbol_count.wrapping_add((*self_0).alias_count);
+    (*self_0).symbol_count.wrapping_add((*self_0).alias_count)
 }
 /* *
  * Get the ABI version number for this language. This version number is used
@@ -15,18 +15,18 @@ pub unsafe extern "C" fn ts_language_symbol_count(mut self_0: *const TSLanguage)
  */
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_version(mut self_0: *const TSLanguage) -> u32 {
-    return (*self_0).version;
+    (*self_0).version
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_field_count(mut self_0: *const TSLanguage) -> u32 {
     if (*self_0).version >= 10 as os::raw::c_int as os::raw::c_uint {
-        return (*self_0).field_count;
+        (*self_0).field_count
     } else {
-        return 0 as os::raw::c_int as u32;
-    };
+        0 as os::raw::c_int as u32
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_table_entry(
+pub(crate) unsafe extern "C" fn ts_language_table_entry(
     mut self_0: *const TSLanguage,
     mut state: TSStateId,
     mut symbol: TSSymbol,
@@ -50,47 +50,42 @@ pub unsafe extern "C" fn ts_language_table_entry(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_symbol_metadata(
+pub(crate) unsafe extern "C" fn ts_language_symbol_metadata(
     mut self_0: *const TSLanguage,
     mut symbol: TSSymbol,
 ) -> TSSymbolMetadata {
     if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
-        return {
-            let mut init = TSSymbolMetadata {
-                visible_named: [0; 1],
-            };
-            init.set_visible(1 as os::raw::c_int != 0);
-            init.set_named(1 as os::raw::c_int != 0);
-            init
+        let mut init = TSSymbolMetadata {
+            visible_named: [0; 1],
         };
+        init.set_visible(1 as os::raw::c_int != 0);
+        init.set_named(1 as os::raw::c_int != 0);
+        init
     } else if symbol as os::raw::c_int
         == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
-        return {
-            let mut init = TSSymbolMetadata {
-                visible_named: [0; 1],
-            };
-            init.set_visible(0 as os::raw::c_int != 0);
-            init.set_named(0 as os::raw::c_int != 0);
-            init
+        let mut init = TSSymbolMetadata {
+            visible_named: [0; 1],
         };
+        init.set_visible(0 as os::raw::c_int != 0);
+        init.set_named(0 as os::raw::c_int != 0);
+        init
     } else {
-        return *(*self_0).symbol_metadata.offset(symbol as isize);
-    };
+        *(*self_0).symbol_metadata.offset(symbol as isize)
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_language_public_symbol(
+pub(crate) unsafe extern "C" fn ts_language_public_symbol(
     mut self_0: *const TSLanguage,
     mut symbol: TSSymbol,
 ) -> TSSymbol {
     if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
-        return symbol;
-    }
-    if (*self_0).version >= 11 as os::raw::c_int as os::raw::c_uint {
-        return *(*self_0).public_symbol_map.offset(symbol as isize);
+        symbol
+    } else if (*self_0).version >= 11 as os::raw::c_int as os::raw::c_uint {
+        *(*self_0).public_symbol_map.offset(symbol as isize)
     } else {
-        return symbol;
-    };
+        symbol
+    }
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_symbol_name(
@@ -98,16 +93,16 @@ pub unsafe extern "C" fn ts_language_symbol_name(
     mut symbol: TSSymbol,
 ) -> *const os::raw::c_char {
     if symbol as os::raw::c_int == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int {
-        return b"ERROR\x00" as *const u8 as *const os::raw::c_char;
+        b"ERROR\x00" as *const u8 as *const os::raw::c_char
     } else if symbol as os::raw::c_int
         == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
-        return b"_ERROR\x00" as *const u8 as *const os::raw::c_char;
+        b"_ERROR\x00" as *const u8 as *const os::raw::c_char
     } else if (symbol as os::raw::c_uint) < ts_language_symbol_count(self_0) {
-        return *(*self_0).symbol_names.offset(symbol as isize);
+        *(*self_0).symbol_names.offset(symbol as isize)
     } else {
-        return 0 as *const os::raw::c_char;
-    };
+        ptr::null()
+    }
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_symbol_for_name(
@@ -128,9 +123,7 @@ pub unsafe extern "C" fn ts_language_symbol_for_name(
     let mut i: TSSymbol = 0 as os::raw::c_int as TSSymbol;
     while (i as os::raw::c_uint) < count {
         let mut metadata: TSSymbolMetadata = ts_language_symbol_metadata(self_0, i);
-        if !(!metadata.visible()
-            || metadata.named() as os::raw::c_int != is_named as os::raw::c_int)
-        {
+        if metadata.visible() && metadata.named() as os::raw::c_int == is_named as os::raw::c_int {
             let mut symbol_name: *const os::raw::c_char =
                 *(*self_0).symbol_names.offset(i as isize);
             if strncmp(symbol_name, string, length as usize) == 0
@@ -145,7 +138,7 @@ pub unsafe extern "C" fn ts_language_symbol_for_name(
         }
         i = i.wrapping_add(1)
     }
-    return 0 as os::raw::c_int as TSSymbol;
+    0 as os::raw::c_int as TSSymbol
 }
 /* *
  * Check whether the given node type id belongs to named nodes, anonymous nodes,
@@ -160,12 +153,12 @@ pub unsafe extern "C" fn ts_language_symbol_type(
 ) -> TSSymbolType {
     let mut metadata: TSSymbolMetadata = ts_language_symbol_metadata(self_0, symbol);
     if metadata.named() {
-        return TSSymbolTypeRegular;
+        TSSymbolTypeRegular
     } else if metadata.visible() {
-        return TSSymbolTypeAnonymous;
+        TSSymbolTypeAnonymous
     } else {
-        return TSSymbolTypeAuxiliary;
-    };
+        TSSymbolTypeAuxiliary
+    }
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_language_field_name_for_id(
@@ -174,10 +167,10 @@ pub unsafe extern "C" fn ts_language_field_name_for_id(
 ) -> *const os::raw::c_char {
     let mut count: u32 = ts_language_field_count(self_0);
     if count != 0 && id as os::raw::c_uint <= count {
-        return *(*self_0).field_names.offset(id as isize);
+        *(*self_0).field_names.offset(id as isize)
     } else {
-        return 0 as *const os::raw::c_char;
-    };
+        ptr::null()
+    }
 }
 
 #[no_mangle]
@@ -207,5 +200,5 @@ pub unsafe extern "C" fn ts_language_field_id_for_name(
         }
         i = i.wrapping_add(1)
     }
-    return 0 as os::raw::c_int as TSFieldId;
+    0 as os::raw::c_int as TSFieldId
 }
