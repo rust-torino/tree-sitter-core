@@ -198,7 +198,9 @@ unsafe extern "C" fn ts_node__child(
         while ts_node_child_iterator_next(&mut iterator, &mut child) {
             if ts_node__is_relevant(child, include_anonymous) {
                 if index == child_index {
-                    ts_tree_set_cached_parent(self_0.tree, &mut child, &mut self_0);
+                    if ts_node__is_relevant(self_0, true) {
+                        ts_tree_set_cached_parent(self_0.tree, &mut child, &mut self_0);
+                    }
                     return child;
                 }
                 index = index.wrapping_add(1)
