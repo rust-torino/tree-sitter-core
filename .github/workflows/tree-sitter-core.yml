@@ -111,7 +111,7 @@ jobs:
 #          -Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off
 #          -Zno-landing-pads
 #      run: |
-#        cargo test --all --all-features --no-fail-fast --verbose
+#        cargo test --all --all-features --no-fail-fast --verbose --release
 #
 #    - name: Run grcov
 #      id: coverage
@@ -205,12 +205,12 @@ jobs:
     - name: Run no-default-features tests
       if: matrix.conf != 'cargo-c'
       run: |
-        cargo test --all --no-default-features
+        cargo test --all --no-default-features --release
 
     - name: Run all-features tests
       if: matrix.conf != 'cargo-c'
       run: |
-        cargo test --all --all-features
+        cargo test --all --all-features --release
 
     - name: Install cargo-c
       if: matrix.conf == 'cargo-c'
@@ -281,11 +281,11 @@ jobs:
 
     - name: Run no-default-features tests
       run: |
-        cargo test --all --no-default-features
+        cargo test --all --no-default-features --release
 
     - name: Run all-features tests
       run: |
-        cargo test --all --all-features
+        cargo test --all --all-features --release
 
     - name: Stop sccache server
       run: |
@@ -349,11 +349,11 @@ jobs:
 
     - name: Run no-default-features tests
       run: |
-        cargo test --no-default-features
+        cargo test --no-default-features --release
 
     - name: Run all-features tests
       run: |
-        cargo test --all-features
+        cargo test --all-features --release
 
     - name: Stop sccache server
       run: |
