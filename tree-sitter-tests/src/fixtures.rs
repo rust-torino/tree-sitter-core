@@ -1,10 +1,12 @@
 use crate::{
     error::Error,
+    generate::generate_parser_in_directory,
     tests::helpers::dirs::*,
     util::{clone_or_pull_repository, get_treesitter_repository},
 };
 use once_cell::sync::OnceCell;
-use std::fs;
+use rayon::prelude::*;
+use std::{fs, path::PathBuf};
 use walkdir::WalkDir;
 
 static CELL: OnceCell<Result<(), Error>> = OnceCell::new();
@@ -21,6 +23,30 @@ impl Grammar {
             name,
             branch: "master",
         }
+    }
+
+    fn get_grammar_directories(&self) -> impl Iterator<Item = Result<PathBuf, walkdir::Error>> {
+        let base_dir = GRAMMARS_DIR.join(self.name);
+        WalkDir::new(base_dir)
+            .into_iter()
+            .filter_entry(|entry| entry.file_name() != ".git")
+            .filter(|entry| match entry {
+                Ok(entry) => entry.file_type().is_dir(),
+                Err(_) => true,
+            })
+            .filter_map(|entry| match entry {
+                Ok(entry) => {
+                    let path = entry.path();
+                    let js_path = path.join("grammar.js");
+
+                    if js_path.exists() {
+                        Some(Ok(path.to_owned()))
+                    } else {
+                        None
+                    }
+                }
+                Err(err) => Some(Err(err)),
+            })
     }
 }
 
@@ -52,6 +78,27 @@ pub fn prepare() -> Result<(), &'static Error> {
             let url = format!("{}{}", GRAMMAR_BASE_URL, grammar.name);
             clone_or_pull_repository(&url, Some(grammar.branch), &directory)?;
         }
+
+        GRAMMARS
+            .par_iter()
+            .flat_map(|grammar| grammar.get_grammar_directories().par_bridge())
+            .map(|grammar| grammar.expect("error while listing grammar directories"))
+            .try_for_each(|grammar_dir| {
+                let mut grammar_path = grammar_dir.join("src");
+                grammar_path.push("grammar.json");
+                assert!(grammar_path.exists());
+
+                generate_parser_in_directory(
+                    &grammar_dir,
+                    Some(
+                        grammar_path
+                            .to_str()
+                            .expect("Unable to convert grammar path to UTF-8 string"),
+                    ),
+                    true,
+                    None,
+                )
+            })?;
 
         if !TEST_GRAMMARS_DIR.exists() {
             let tree_sitter_repo_path = get_treesitter_repository()?;
