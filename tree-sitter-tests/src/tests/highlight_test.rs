@@ -402,7 +402,6 @@ fn test_highlighting_javascript_with_jsdoc() {
 }
 
 #[test]
-#[ignore]
 fn test_highlighting_with_content_children_included() {
     let source = vec!["assert!(", "    a.b.c() < D::e::<F>()", ");"].join("\n");
 
