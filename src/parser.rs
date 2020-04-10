@@ -6,7 +6,7 @@ use crate::{
 use std::{
     ffi::{self, CStr},
     io::Write,
-    os,
+    os, ptr,
     time::{Duration, Instant},
 };
 
@@ -86,11 +86,11 @@ unsafe extern "C" fn ts_string_input_read(
     let mut self_0: *mut TSStringInput = _self as *mut TSStringInput;
     if byte >= (*self_0).length {
         *length = 0 as os::raw::c_int as u32;
-        return b"\x00" as *const u8 as *const os::raw::c_char;
+        b"\x00" as *const u8 as *const os::raw::c_char
     } else {
         *length = (*self_0).length.wrapping_sub(byte);
-        return (*self_0).string.offset(byte as isize);
-    };
+        (*self_0).string.offset(byte as isize)
+    }
 }
 // Parser - Private
 unsafe extern "C" fn ts_parser__log(mut self_0: *mut TSParser) {
@@ -204,7 +204,7 @@ unsafe extern "C" fn ts_parser__breakdown_top_of_stack(
             break;
         }
     }
-    return did_break_down;
+    did_break_down
 }
 unsafe extern "C" fn ts_parser__breakdown_lookahead(
     mut self_0: *mut TSParser,
@@ -288,7 +288,7 @@ unsafe extern "C" fn ts_parser__compare_versions(
     if b.dynamic_precedence > a.dynamic_precedence {
         return ErrorComparisonPreferRight;
     }
-    return ErrorComparisonNone;
+    ErrorComparisonNone
 }
 unsafe extern "C" fn ts_parser__version_status(
     mut self_0: *mut TSParser,
@@ -299,17 +299,13 @@ unsafe extern "C" fn ts_parser__version_status(
     if is_paused {
         cost = cost.wrapping_add(100)
     }
-    return {
-        let mut init = ErrorStatus {
-            cost: cost,
-            node_count: ts_stack_node_count_since_error((*self_0).stack, version),
-            dynamic_precedence: ts_stack_dynamic_precedence((*self_0).stack, version),
-            is_in_error: is_paused as os::raw::c_int != 0
-                || ts_stack_state((*self_0).stack, version) as os::raw::c_int
-                    == 0 as os::raw::c_int,
-        };
-        init
-    };
+    ErrorStatus {
+        cost,
+        node_count: ts_stack_node_count_since_error((*self_0).stack, version),
+        dynamic_precedence: ts_stack_dynamic_precedence((*self_0).stack, version),
+        is_in_error: is_paused as os::raw::c_int != 0
+            || ts_stack_state((*self_0).stack, version) as os::raw::c_int == 0 as os::raw::c_int,
+    }
 }
 unsafe extern "C" fn ts_parser__better_version_exists(
     mut self_0: *mut TSParser,
@@ -320,17 +316,14 @@ unsafe extern "C" fn ts_parser__better_version_exists(
     if !(*self_0).finished_tree.ptr.is_null()
         && ts_subtree_error_cost((*self_0).finished_tree) <= cost
     {
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     let mut position: Length = ts_stack_position((*self_0).stack, version);
-    let mut status: ErrorStatus = {
-        let mut init = ErrorStatus {
-            cost: cost,
-            node_count: ts_stack_node_count_since_error((*self_0).stack, version),
-            dynamic_precedence: ts_stack_dynamic_precedence((*self_0).stack, version),
-            is_in_error: is_in_error,
-        };
-        init
+    let mut status = ErrorStatus {
+        cost,
+        node_count: ts_stack_node_count_since_error((*self_0).stack, version),
+        dynamic_precedence: ts_stack_dynamic_precedence((*self_0).stack, version),
+        is_in_error,
     };
     let mut i: StackVersion = 0 as os::raw::c_int as StackVersion;
     let mut n: StackVersion = ts_stack_version_count((*self_0).stack);
@@ -352,7 +345,7 @@ unsafe extern "C" fn ts_parser__better_version_exists(
         }
         i = i.wrapping_add(1)
     }
-    return 0 as os::raw::c_int != 0;
+    false
 }
 unsafe extern "C" fn ts_parser__restore_external_scanner(
     mut self_0: *mut TSParser,
@@ -378,7 +371,7 @@ unsafe extern "C" fn ts_parser__restore_external_scanner(
             .deserialize
             .expect("non-null function pointer")(
             (*self_0).external_scanner_payload,
-            0 as *const os::raw::c_char,
+            ptr::null(),
             0 as os::raw::c_int as os::raw::c_uint,
         );
     };
@@ -420,8 +413,8 @@ unsafe extern "C" fn ts_parser__can_reuse_first_leaf(
     }
     // If the current state allows external tokens or other tokens that conflict with this
     // token, this token is not reusable.
-    return current_lex_mode.external_lex_state as os::raw::c_int == 0 as os::raw::c_int
-        && (*table_entry).is_reusable as os::raw::c_int != 0;
+    current_lex_mode.external_lex_state as os::raw::c_int == 0 as os::raw::c_int
+        && (*table_entry).is_reusable as os::raw::c_int != 0
 }
 unsafe extern "C" fn ts_parser__lex(
     mut self_0: *mut TSParser,
@@ -695,7 +688,7 @@ unsafe extern "C" fn ts_parser__lex(
             ts_parser__log(self_0);
         }
     }
-    return result;
+    result
 }
 unsafe extern "C" fn ts_parser__get_cached_token(
     mut self_0: *mut TSParser,
@@ -722,9 +715,9 @@ unsafe extern "C" fn ts_parser__get_cached_token(
             return (*cache).token;
         }
     }
-    return Subtree {
+    Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
-    };
+    }
 }
 unsafe extern "C" fn ts_parser__set_cached_token(
     mut self_0: *mut TSParser,
@@ -754,12 +747,12 @@ unsafe extern "C" fn ts_parser__has_included_range_difference(
     mut start_position: u32,
     mut end_position: u32,
 ) -> bool {
-    return ts_range_array_intersects(
+    ts_range_array_intersects(
         &(*self_0).included_range_differences,
         (*self_0).included_range_difference_index,
         start_position,
         end_position,
-    );
+    )
 }
 unsafe extern "C" fn ts_parser__reuse_node(
     mut self_0: *mut TSParser,
@@ -790,7 +783,7 @@ unsafe extern "C" fn ts_parser__reuse_node(
         // Do not reuse an EOF node if the included ranges array has changes
         // later on in the file.
         if ts_subtree_is_eof(result) {
-            end_byte_offset = 4294967295 as os::raw::c_uint
+            end_byte_offset = 4_294_967_295 as os::raw::c_uint
         }
         if byte_offset > position {
             if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -846,7 +839,7 @@ unsafe extern "C" fn ts_parser__reuse_node(
             }
             reusable_node_advance(&mut (*self_0).reusable_node);
         } else {
-            let mut reason: *const os::raw::c_char = 0 as *const os::raw::c_char;
+            let mut reason: *const os::raw::c_char = ptr::null();
             if ts_subtree_has_changes(result) {
                 reason = b"has_changes\x00" as *const u8 as *const os::raw::c_char
             } else if ts_subtree_is_error(result) {
@@ -927,9 +920,9 @@ unsafe extern "C" fn ts_parser__reuse_node(
             }
         }
     }
-    return Subtree {
+    Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
-    };
+    }
 }
 unsafe extern "C" fn ts_parser__select_tree(
     mut self_0: *mut TSParser,
@@ -1059,7 +1052,7 @@ unsafe extern "C" fn ts_parser__select_tree(
                 .unwrap();
                 ts_parser__log(self_0);
             }
-            return 0 as os::raw::c_int != 0;
+            false
         }
         1 => {
             if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -1081,7 +1074,7 @@ unsafe extern "C" fn ts_parser__select_tree(
                 .unwrap();
                 ts_parser__log(self_0);
             }
-            return 1 as os::raw::c_int != 0;
+            true
         }
         _ => {
             if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -1103,9 +1096,9 @@ unsafe extern "C" fn ts_parser__select_tree(
                 .unwrap();
                 ts_parser__log(self_0);
             }
-            return 0 as os::raw::c_int != 0;
+            false
         }
-    };
+    }
 }
 unsafe extern "C" fn ts_parser__shift(
     mut self_0: *mut TSParser,
@@ -1162,10 +1155,10 @@ unsafe extern "C" fn ts_parser__replace_children(
         ts_subtree_from_mut((*self_0).scratch_tree),
     ) {
         *(*tree).ptr = *(*self_0).scratch_tree.ptr;
-        return 1 as os::raw::c_int != 0;
+        true
     } else {
-        return 0 as os::raw::c_int != 0;
-    };
+        false
+    }
 }
 unsafe extern "C" fn ts_parser__reduce(
     mut self_0: *mut TSParser,
@@ -1294,11 +1287,9 @@ unsafe extern "C" fn ts_parser__reduce(
             }
             let mut j_0: StackVersion = 0 as os::raw::c_int as StackVersion;
             while j_0 < slice_version {
-                if !(j_0 == version) {
-                    if ts_stack_merge((*self_0).stack, j_0, slice_version) {
-                        removed_version_count = removed_version_count.wrapping_add(1);
-                        break;
-                    }
+                if j_0 != version && ts_stack_merge((*self_0).stack, j_0, slice_version) {
+                    removed_version_count = removed_version_count.wrapping_add(1);
+                    break;
                 }
                 j_0 = j_0.wrapping_add(1)
             }
@@ -1306,11 +1297,11 @@ unsafe extern "C" fn ts_parser__reduce(
         i = i.wrapping_add(1)
     }
     // Return the first new stack version that was created.
-    return if ts_stack_version_count((*self_0).stack) > initial_version_count {
+    if ts_stack_version_count((*self_0).stack) > initial_version_count {
         initial_version_count
     } else {
         -(1 as os::raw::c_int) as StackVersion
-    };
+    }
 }
 unsafe extern "C" fn ts_parser__accept(
     mut self_0: *mut TSParser,
@@ -1451,8 +1442,9 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
                             if action.params.c2rust_unnamed_0.child_count as os::raw::c_int
                                 > 0 as os::raw::c_int
                             {
-                                ts_reduce_action_set_add(&mut (*self_0).reduce_actions, {
-                                    let mut init = ReduceAction {
+                                ts_reduce_action_set_add(
+                                    &mut (*self_0).reduce_actions,
+                                    ReduceAction {
                                         count: action.params.c2rust_unnamed_0.child_count as u32,
                                         symbol: action.params.c2rust_unnamed_0.symbol,
                                         dynamic_precedence: action
@@ -1462,9 +1454,8 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
                                             as os::raw::c_int,
                                         production_id: action.params.c2rust_unnamed_0.production_id
                                             as os::raw::c_ushort,
-                                    };
-                                    init
-                                });
+                                    },
+                                );
                             }
                         }
                         _ => {}
@@ -1492,20 +1483,20 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
             }
             if has_shift_action {
                 can_shift_lookahead_symbol = 1 as os::raw::c_int != 0;
-                current_block_33 = 13619784596304402172;
+                current_block_33 = 13_619_784_596_304_402_172;
             } else if reduction_version != -(1 as os::raw::c_int) as StackVersion
                 && i < MAX_VERSION_COUNT
             {
                 ts_stack_renumber_version((*self_0).stack, reduction_version, version);
-                current_block_33 = 14916268686031723178;
+                current_block_33 = 14_916_268_686_031_723_178;
             } else {
                 if lookahead_symbol as os::raw::c_int != 0 as os::raw::c_int {
                     ts_stack_remove_version((*self_0).stack, version);
                 }
-                current_block_33 = 13619784596304402172;
+                current_block_33 = 13_619_784_596_304_402_172;
             }
             match current_block_33 {
-                14916268686031723178 => {}
+                14_916_268_686_031_723_178 => {}
                 _ => {
                     if version == starting_version {
                         version = version_count
@@ -1517,7 +1508,7 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
         }
         i = i.wrapping_add(1)
     }
-    return can_shift_lookahead_symbol;
+    can_shift_lookahead_symbol
 }
 unsafe extern "C" fn ts_parser__handle_error(
     mut self_0: *mut TSParser,
@@ -1544,60 +1535,59 @@ unsafe extern "C" fn ts_parser__handle_error(
                     ts_language_next_state((*self_0).language, state, missing_symbol);
                 if !(state_after_missing_symbol as os::raw::c_int == 0 as os::raw::c_int
                     || state_after_missing_symbol as os::raw::c_int == state as os::raw::c_int)
-                {
-                    if ts_language_has_reduce_action(
+                    && ts_language_has_reduce_action(
                         (*self_0).language,
                         state_after_missing_symbol,
                         lookahead_symbol,
+                    )
+                {
+                    // In case the parser is currently outside of any included range, the lexer will
+                    // snap to the beginning of the next included range. The missing token's padding
+                    // must be assigned to position it within the next included range.
+                    ts_lexer_reset(&mut (*self_0).lexer, position);
+                    ts_lexer_mark_end(&mut (*self_0).lexer);
+                    let mut padding: Length =
+                        length_sub((*self_0).lexer.token_end_position, position);
+                    let mut version_with_missing_tree: StackVersion =
+                        ts_stack_copy_version((*self_0).stack, v);
+                    let mut missing_tree: Subtree = ts_subtree_new_missing_leaf(
+                        &mut (*self_0).tree_pool,
+                        missing_symbol,
+                        padding,
+                        (*self_0).language,
+                    );
+                    ts_stack_push(
+                        (*self_0).stack,
+                        version_with_missing_tree,
+                        missing_tree,
+                        0 as os::raw::c_int != 0,
+                        state_after_missing_symbol,
+                    );
+                    if ts_parser__do_all_potential_reductions(
+                        self_0,
+                        version_with_missing_tree,
+                        lookahead_symbol,
                     ) {
-                        // In case the parser is currently outside of any included range, the lexer will
-                        // snap to the beginning of the next included range. The missing token's padding
-                        // must be assigned to position it within the next included range.
-                        ts_lexer_reset(&mut (*self_0).lexer, position);
-                        ts_lexer_mark_end(&mut (*self_0).lexer);
-                        let mut padding: Length =
-                            length_sub((*self_0).lexer.token_end_position, position);
-                        let mut version_with_missing_tree: StackVersion =
-                            ts_stack_copy_version((*self_0).stack, v);
-                        let mut missing_tree: Subtree = ts_subtree_new_missing_leaf(
-                            &mut (*self_0).tree_pool,
-                            missing_symbol,
-                            padding,
-                            (*self_0).language,
-                        );
-                        ts_stack_push(
-                            (*self_0).stack,
-                            version_with_missing_tree,
-                            missing_tree,
-                            0 as os::raw::c_int != 0,
-                            state_after_missing_symbol,
-                        );
-                        if ts_parser__do_all_potential_reductions(
-                            self_0,
-                            version_with_missing_tree,
-                            lookahead_symbol,
-                        ) {
-                            if (*self_0).lexer.logger.log.is_some()
-                                || (*self_0).dot_graph_file.is_valid()
-                            {
-                                snwrite!(
-                                    (*self_0).lexer.debug_buffer.as_mut_ptr(),
-                                    1024,
-                                    "recover_with_missing symbol:{}, state:{}",
-                                    CStr::from_ptr(ts_language_symbol_name(
-                                        (*self_0).language,
-                                        missing_symbol
-                                    ))
-                                    .to_string_lossy(),
-                                    ts_stack_state((*self_0).stack, version_with_missing_tree)
-                                        as os::raw::c_int,
-                                )
-                                .unwrap();
-                                ts_parser__log(self_0);
-                            }
-                            did_insert_missing_token = 1 as os::raw::c_int != 0;
-                            break;
+                        if (*self_0).lexer.logger.log.is_some()
+                            || (*self_0).dot_graph_file.is_valid()
+                        {
+                            snwrite!(
+                                (*self_0).lexer.debug_buffer.as_mut_ptr(),
+                                1024,
+                                "recover_with_missing symbol:{}, state:{}",
+                                CStr::from_ptr(ts_language_symbol_name(
+                                    (*self_0).language,
+                                    missing_symbol
+                                ))
+                                .to_string_lossy(),
+                                ts_stack_state((*self_0).stack, version_with_missing_tree)
+                                    as os::raw::c_int,
+                            )
+                            .unwrap();
+                            ts_parser__log(self_0);
                         }
+                        did_insert_missing_token = 1 as os::raw::c_int != 0;
+                        break;
                     }
                 }
                 missing_symbol = missing_symbol.wrapping_add(1)
@@ -1724,7 +1714,7 @@ unsafe extern "C" fn ts_parser__recover_to_state(
         }
         i = i.wrapping_add(1)
     }
-    return previous_version != -(1 as os::raw::c_int) as StackVersion;
+    previous_version != -(1 as os::raw::c_int) as StackVersion
 }
 unsafe extern "C" fn ts_parser__recover(
     mut self_0: *mut TSParser,
@@ -1754,85 +1744,84 @@ unsafe extern "C" fn ts_parser__recover(
         let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
         while i < (*summary).size {
             let mut entry: StackSummaryEntry = *(*summary).contents.offset(i as isize);
-            if !(entry.state as os::raw::c_int == 0 as os::raw::c_int) {
-                if !(entry.position.bytes == position.bytes) {
-                    let mut depth: os::raw::c_uint = entry.depth;
-                    if node_count_since_error > 0 as os::raw::c_int as os::raw::c_uint {
-                        depth = depth.wrapping_add(1)
+            if entry.state as os::raw::c_int != 0 as os::raw::c_int
+                && entry.position.bytes != position.bytes
+            {
+                let mut depth: os::raw::c_uint = entry.depth;
+                if node_count_since_error > 0 as os::raw::c_int as os::raw::c_uint {
+                    depth = depth.wrapping_add(1)
+                }
+                // Do not recover in ways that create redundant stack versions.
+                let mut would_merge: bool = 0 as os::raw::c_int != 0;
+                let mut j: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+                while j < previous_version_count {
+                    if ts_stack_state((*self_0).stack, j) as os::raw::c_int
+                        == entry.state as os::raw::c_int
+                        && ts_stack_position((*self_0).stack, j).bytes == position.bytes
+                    {
+                        would_merge = 1 as os::raw::c_int != 0;
+                        break;
+                    } else {
+                        j = j.wrapping_add(1)
                     }
-                    // Do not recover in ways that create redundant stack versions.
-                    let mut would_merge: bool = 0 as os::raw::c_int != 0;
-                    let mut j: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
-                    while j < previous_version_count {
-                        if ts_stack_state((*self_0).stack, j) as os::raw::c_int
-                            == entry.state as os::raw::c_int
-                            && ts_stack_position((*self_0).stack, j).bytes == position.bytes
+                }
+                if !would_merge {
+                    // Do not recover if the result would clearly be worse than some existing stack version.
+                    let mut new_cost: os::raw::c_uint = current_error_cost
+                        .wrapping_add(entry.depth.wrapping_mul(100))
+                        .wrapping_add(
+                            position
+                                .bytes
+                                .wrapping_sub(entry.position.bytes)
+                                .wrapping_mul(1),
+                        )
+                        .wrapping_add(
+                            position
+                                .extent
+                                .row
+                                .wrapping_sub(entry.position.extent.row)
+                                .wrapping_mul(30),
+                        );
+                    if ts_parser__better_version_exists(
+                        self_0,
+                        version,
+                        0 as os::raw::c_int != 0,
+                        new_cost,
+                    ) {
+                        break;
+                    }
+                    // If the current lookahead token is valid in some previous state, recover to that state.
+                    // Then stop looking for further recoveries.
+                    if ts_language_has_actions(
+                        (*self_0).language,
+                        entry.state,
+                        ts_subtree_symbol(lookahead),
+                    ) && ts_parser__recover_to_state(self_0, version, depth, entry.state)
+                    {
+                        did_recover = 1 as os::raw::c_int != 0;
+                        if (*self_0).lexer.logger.log.is_some()
+                            || (*self_0).dot_graph_file.is_valid()
                         {
-                            would_merge = 1 as os::raw::c_int != 0;
-                            break;
-                        } else {
-                            j = j.wrapping_add(1)
-                        }
-                    }
-                    if !would_merge {
-                        // Do not recover if the result would clearly be worse than some existing stack version.
-                        let mut new_cost: os::raw::c_uint = current_error_cost
-                            .wrapping_add(entry.depth.wrapping_mul(100))
-                            .wrapping_add(
-                                position
-                                    .bytes
-                                    .wrapping_sub(entry.position.bytes)
-                                    .wrapping_mul(1),
+                            snwrite!(
+                                (*self_0).lexer.debug_buffer.as_mut_ptr(),
+                                1024,
+                                "recover_to_previous state:{}, depth:{}",
+                                entry.state as os::raw::c_int,
+                                depth,
                             )
-                            .wrapping_add(
-                                position
-                                    .extent
-                                    .row
-                                    .wrapping_sub(entry.position.extent.row)
-                                    .wrapping_mul(30),
+                            .unwrap();
+                            ts_parser__log(self_0);
+                        }
+                        if (*self_0).dot_graph_file.is_valid() {
+                            let dot_graph_file = &mut (*self_0).dot_graph_file;
+                            ts_stack_print_dot_graph(
+                                (*self_0).stack,
+                                (*self_0).language,
+                                dot_graph_file,
                             );
-                        if ts_parser__better_version_exists(
-                            self_0,
-                            version,
-                            0 as os::raw::c_int != 0,
-                            new_cost,
-                        ) {
-                            break;
+                            write!(dot_graph_file, "\n\n").unwrap();
                         }
-                        // If the current lookahead token is valid in some previous state, recover to that state.
-                        // Then stop looking for further recoveries.
-                        if ts_language_has_actions(
-                            (*self_0).language,
-                            entry.state,
-                            ts_subtree_symbol(lookahead),
-                        ) {
-                            if ts_parser__recover_to_state(self_0, version, depth, entry.state) {
-                                did_recover = 1 as os::raw::c_int != 0;
-                                if (*self_0).lexer.logger.log.is_some()
-                                    || (*self_0).dot_graph_file.is_valid()
-                                {
-                                    snwrite!(
-                                        (*self_0).lexer.debug_buffer.as_mut_ptr(),
-                                        1024,
-                                        "recover_to_previous state:{}, depth:{}",
-                                        entry.state as os::raw::c_int,
-                                        depth,
-                                    )
-                                    .unwrap();
-                                    ts_parser__log(self_0);
-                                }
-                                if (*self_0).dot_graph_file.is_valid() {
-                                    let dot_graph_file = &mut (*self_0).dot_graph_file;
-                                    ts_stack_print_dot_graph(
-                                        (*self_0).stack,
-                                        (*self_0).language,
-                                        dot_graph_file,
-                                    );
-                                    write!(dot_graph_file, "\n\n").unwrap();
-                                }
-                                break;
-                            }
-                        }
+                        break;
                     }
                 }
             }
@@ -1873,13 +1862,10 @@ unsafe extern "C" fn ts_parser__recover(
             .unwrap();
             ts_parser__log(self_0);
         }
-        let mut children: SubtreeArray = {
-            let mut init = SubtreeArray {
-                contents: std::ptr::null_mut::<Subtree>(),
-                size: 0 as os::raw::c_int as u32,
-                capacity: 0 as os::raw::c_int as u32,
-            };
-            init
+        let mut children = SubtreeArray {
+            contents: std::ptr::null_mut::<Subtree>(),
+            size: 0 as os::raw::c_int as u32,
+            capacity: 0 as os::raw::c_int as u32,
         };
         let mut parent: Subtree = ts_subtree_new_error_node(
             &mut (*self_0).tree_pool,
@@ -1945,13 +1931,10 @@ unsafe extern "C" fn ts_parser__recover(
         .unwrap();
         ts_parser__log(self_0);
     }
-    let mut children_0: SubtreeArray = {
-        let mut init = SubtreeArray {
-            contents: std::ptr::null_mut::<Subtree>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    let mut children_0 = SubtreeArray {
+        contents: std::ptr::null_mut::<Subtree>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     array__reserve(
         &mut children_0 as *mut SubtreeArray as *mut VoidArray,
@@ -2016,7 +1999,7 @@ unsafe extern "C" fn ts_parser__recover(
             1 as os::raw::c_int as usize,
             ::std::mem::size_of::<Subtree>(),
         );
-        let ref mut fresh12 = (*pop.contents.offset(0 as os::raw::c_int as isize))
+        let fresh12 = &mut (*pop.contents.offset(0 as os::raw::c_int as isize))
             .subtrees
             .size;
         let fresh13 = *fresh12;
@@ -2062,13 +2045,10 @@ unsafe extern "C" fn ts_parser__advance(
     let mut lookahead: Subtree = Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };
-    let mut table_entry: TableEntry = {
-        let mut init = TableEntry {
-            actions: std::ptr::null::<TSParseAction>(),
-            action_count: 0 as os::raw::c_int as u32,
-            is_reusable: false,
-        };
-        init
+    let mut table_entry = TableEntry {
+        actions: std::ptr::null::<TSParseAction>(),
+        action_count: 0 as os::raw::c_int as u32,
+        is_reusable: false,
     };
     // If possible, reuse a node from the previous syntax tree.
     if allow_node_reuse {
@@ -2152,7 +2132,7 @@ unsafe extern "C" fn ts_parser__advance(
                         if action.params.c2rust_unnamed.extra() {
                             // TODO: remove when TREE_SITTER_LANGUAGE_VERSION 9 is out.
                             if state as os::raw::c_int == 0 as os::raw::c_int {
-                                current_block_67 = 15125582407903384992;
+                                current_block_67 = 15_125_582_407_903_384_992;
                             } else {
                                 next_state = state;
                                 if (*self_0).lexer.logger.log.is_some()
@@ -2166,7 +2146,7 @@ unsafe extern "C" fn ts_parser__advance(
                                     .unwrap();
                                     ts_parser__log(self_0);
                                 }
-                                current_block_67 = 6717214610478484138;
+                                current_block_67 = 6_717_214_610_478_484_138;
                             }
                         } else {
                             next_state = action.params.c2rust_unnamed.state;
@@ -2182,10 +2162,10 @@ unsafe extern "C" fn ts_parser__advance(
                                 .unwrap();
                                 ts_parser__log(self_0);
                             }
-                            current_block_67 = 6717214610478484138;
+                            current_block_67 = 6_717_214_610_478_484_138;
                         }
                         match current_block_67 {
-                            15125582407903384992 => {}
+                            15_125_582_407_903_384_992 => {}
                             _ => {
                                 if ts_subtree_child_count(lookahead)
                                     > 0 as os::raw::c_int as os::raw::c_uint
@@ -2386,7 +2366,7 @@ unsafe extern "C" fn ts_parser__advance(
 }
 unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os::raw::c_uint {
     let mut made_changes: bool = 0 as os::raw::c_int != 0;
-    let mut min_error_cost: os::raw::c_uint = (2147483647 as os::raw::c_int as os::raw::c_uint)
+    let mut min_error_cost: os::raw::c_uint = (2_147_483_647 as os::raw::c_int as os::raw::c_uint)
         .wrapping_mul(2)
         .wrapping_add(1);
     let mut i: StackVersion = 0 as os::raw::c_int as StackVersion;
@@ -2496,13 +2476,13 @@ unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os:
             write!(dot_graph_file, "\n\n").unwrap();
         }
     }
-    return min_error_cost;
+    min_error_cost
 }
 unsafe extern "C" fn ts_parser_has_outstanding_parse(mut self_0: *mut TSParser) -> bool {
-    return ts_stack_state((*self_0).stack, 0 as os::raw::c_int as StackVersion) as os::raw::c_int
+    ts_stack_state((*self_0).stack, 0 as os::raw::c_int as StackVersion) as os::raw::c_int
         != 1 as os::raw::c_int
         || ts_stack_node_count_since_error((*self_0).stack, 0 as os::raw::c_int as StackVersion)
-            != 0 as os::raw::c_int as os::raw::c_uint;
+            != 0 as os::raw::c_int as os::raw::c_uint
 }
 // Parser - Public
 #[no_mangle]
@@ -2514,7 +2494,7 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
     ts_lexer_init(&mut (*self_0).lexer);
     (*self_0).reduce_actions.size = 0 as os::raw::c_int as u32;
     (*self_0).reduce_actions.capacity = 0 as os::raw::c_int as u32;
-    (*self_0).reduce_actions.contents = 0 as *mut ReduceAction;
+    (*self_0).reduce_actions.contents = ptr::null_mut();
     array__reserve(
         &mut (*self_0).reduce_actions as *mut ReduceActionSet as *mut VoidArray,
         ::std::mem::size_of::<ReduceAction>(),
@@ -2527,7 +2507,7 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
     };
     (*self_0).reusable_node = reusable_node_new();
     (*self_0).dot_graph_file = util::File::empty();
-    (*self_0).cancellation_flag = 0 as *const usize;
+    (*self_0).cancellation_flag = ptr::null();
     (*self_0).timeout_duration = Default::default();
     (*self_0).end_instant = None;
     (*self_0).operation_count = 0 as os::raw::c_int as os::raw::c_uint;
@@ -2535,13 +2515,10 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     (*self_0).scratch_tree.ptr = &mut (*self_0).scratch_tree_data;
-    (*self_0).included_range_differences = {
-        let mut init = TSRangeArray {
-            contents: std::ptr::null_mut::<TSRange>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    (*self_0).included_range_differences = TSRangeArray {
+        contents: std::ptr::null_mut::<TSRange>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     (*self_0).included_range_difference_index = 0 as os::raw::c_int as os::raw::c_uint;
     ts_parser__set_cached_token(
@@ -2554,7 +2531,7 @@ pub unsafe extern "C" fn ts_parser_new() -> *mut TSParser {
             ptr: std::ptr::null::<SubtreeHeapData>(),
         },
     );
-    return self_0;
+    self_0
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_delete(mut self_0: *mut TSParser) {
@@ -2594,7 +2571,7 @@ pub unsafe extern "C" fn ts_parser_delete(mut self_0: *mut TSParser) {
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_language(mut self_0: *const TSParser) -> *const TSLanguage {
-    return (*self_0).language;
+    (*self_0).language
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_set_language(
@@ -2603,10 +2580,10 @@ pub unsafe extern "C" fn ts_parser_set_language(
 ) -> bool {
     if !language.is_null() {
         if (*language).version > 11 as os::raw::c_int as os::raw::c_uint {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
         if (*language).version < 9 as os::raw::c_int as os::raw::c_uint {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
     }
     if !(*self_0).external_scanner_payload.is_null()
@@ -2623,15 +2600,15 @@ pub unsafe extern "C" fn ts_parser_set_language(
             .create
             .expect("non-null function pointer")()
     } else {
-        (*self_0).external_scanner_payload = 0 as *mut ffi::c_void
+        (*self_0).external_scanner_payload = ptr::null_mut()
     }
     (*self_0).language = language;
     ts_parser_reset(self_0);
-    return 1 as os::raw::c_int != 0;
+    true
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_logger(mut self_0: *const TSParser) -> TSLogger {
-    return (*self_0).lexer.logger;
+    (*self_0).lexer.logger
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_set_logger(mut self_0: *mut TSParser, mut logger: TSLogger) {
@@ -2667,7 +2644,7 @@ pub unsafe extern "C" fn ts_parser_print_dot_graphs(
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_cancellation_flag(mut self_0: *const TSParser) -> *const usize {
-    return (*self_0).cancellation_flag as *const usize;
+    (*self_0).cancellation_flag as *const usize
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_set_cancellation_flag(
@@ -2678,7 +2655,7 @@ pub unsafe extern "C" fn ts_parser_set_cancellation_flag(
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_timeout_micros(mut self_0: *const TSParser) -> u64 {
-    return (*self_0).timeout_duration.as_micros() as u64;
+    (*self_0).timeout_duration.as_micros() as u64
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_set_timeout_micros(
@@ -2693,14 +2670,14 @@ pub unsafe extern "C" fn ts_parser_set_included_ranges(
     mut ranges: *const TSRange,
     mut count: u32,
 ) -> bool {
-    return ts_lexer_set_included_ranges(&mut (*self_0).lexer, ranges, count);
+    ts_lexer_set_included_ranges(&mut (*self_0).lexer, ranges, count)
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_parser_included_ranges(
+pub(crate) unsafe extern "C" fn ts_parser_included_ranges(
     mut self_0: *const TSParser,
     mut count: *mut u32,
 ) -> *const TSRange {
-    return ts_lexer_included_ranges(&(*self_0).lexer, count);
+    ts_lexer_included_ranges(&(*self_0).lexer, count)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_parser_reset(mut self_0: *mut TSParser) {
@@ -2711,7 +2688,7 @@ pub unsafe extern "C" fn ts_parser_reset(mut self_0: *mut TSParser) {
             .deserialize
             .expect("non-null function pointer")(
             (*self_0).external_scanner_payload,
-            0 as *const os::raw::c_char,
+            ptr::null(),
             0 as os::raw::c_int as os::raw::c_uint,
         );
     }
@@ -2828,7 +2805,7 @@ pub unsafe extern "C" fn ts_parser_parse(
         let mut version: StackVersion = 0 as os::raw::c_int as StackVersion;
         loop {
             version_count = ts_stack_version_count((*self_0).stack);
-            if !(version < version_count) {
+            if version >= version_count {
                 break;
             }
             let mut allow_node_reuse: bool =
@@ -2884,13 +2861,13 @@ pub unsafe extern "C" fn ts_parser_parse(
                 .contents
                 .offset((*self_0).included_range_difference_index as isize)
                 as *mut TSRange;
-            if !((*range_0).end_byte <= position) {
+            if (*range_0).end_byte > position {
                 break;
             }
             (*self_0).included_range_difference_index =
                 (*self_0).included_range_difference_index.wrapping_add(1)
         }
-        if !(version_count != 0 as os::raw::c_int as os::raw::c_uint) {
+        if version_count == 0 as os::raw::c_int as os::raw::c_uint {
             break;
         }
     }
@@ -2918,34 +2895,28 @@ pub unsafe extern "C" fn ts_parser_parse(
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };
     ts_parser_reset(self_0);
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_parser_parse_string(
+pub(crate) unsafe extern "C" fn ts_parser_parse_string(
     mut self_0: *mut TSParser,
     mut old_tree: *const TSTree,
     mut string: *const os::raw::c_char,
     mut length: u32,
 ) -> *mut TSTree {
-    return ts_parser_parse_string_encoding(self_0, old_tree, string, length, TSInputEncodingUTF8);
+    ts_parser_parse_string_encoding(self_0, old_tree, string, length, TSInputEncodingUTF8)
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_parser_parse_string_encoding(
+pub(crate) unsafe extern "C" fn ts_parser_parse_string_encoding(
     mut self_0: *mut TSParser,
     mut old_tree: *const TSTree,
     mut string: *const os::raw::c_char,
     mut length: u32,
     mut encoding: TSInputEncoding,
 ) -> *mut TSTree {
-    let mut input: TSStringInput = {
-        let mut init = TSStringInput {
-            string: string,
-            length: length,
-        };
-        init
-    };
-    return ts_parser_parse(self_0, old_tree, {
-        let mut init = TSInput {
+    let mut input = TSStringInput { string, length };
+    ts_parser_parse(self_0, old_tree, {
+        TSInput {
             payload: &mut input as *mut TSStringInput as *mut ffi::c_void,
             read: Some(
                 ts_string_input_read
@@ -2956,8 +2927,7 @@ pub unsafe extern "C" fn ts_parser_parse_string_encoding(
                         _: *mut u32,
                     ) -> *const os::raw::c_char,
             ),
-            encoding: encoding,
-        };
-        init
-    });
+            encoding,
+        }
+    })
 }
