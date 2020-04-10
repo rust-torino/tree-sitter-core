@@ -277,15 +277,14 @@ pub(crate) fn iswalpha(wc: c_uint) -> c_int {
     const TABLE: [c_uint; 3904] = include!("./alpha.data");
 
     if wc < 0x20000 {
-        return ((TABLE[(TABLE[(wc >> 8) as usize].wrapping_mul(32) + ((wc & 255) >> 3)) as usize]
+        ((TABLE[(TABLE[(wc >> 8) as usize].wrapping_mul(32) + ((wc & 255) >> 3)) as usize]
             >> (wc & 7))
-            & 1) as c_int;
+            & 1) as c_int
+    } else if wc < 0x2fffe {
+        1
+    } else {
+        0
     }
-
-    if wc < 0x2fffe {
-        return 1;
-    }
-    return 0;
 }
 
 // Credits: (musl libc library)[https://www.musl-libc.org/]
