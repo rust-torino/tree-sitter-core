@@ -5,7 +5,7 @@ use std::{ffi, os, ptr::copy_nonoverlapping};
 static mut PARENT_CACHE_CAPACITY: os::raw::c_uint = 32 as os::raw::c_int as os::raw::c_uint;
 
 #[no_mangle]
-pub unsafe extern "C" fn ts_tree_new(
+pub(crate) unsafe extern "C" fn ts_tree_new(
     mut root: Subtree,
     mut language: *const TSLanguage,
     mut included_ranges: *const TSRange,
@@ -27,17 +27,17 @@ pub unsafe extern "C" fn ts_tree_new(
         included_range_count as usize,
     );
     (*result).included_range_count = included_range_count;
-    return result;
+    result
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_copy(mut self_0: *const TSTree) -> *mut TSTree {
     ts_subtree_retain((*self_0).root);
-    return ts_tree_new(
+    ts_tree_new(
         (*self_0).root,
         (*self_0).language,
         (*self_0).included_ranges,
         (*self_0).included_range_count,
-    );
+    )
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_delete(mut self_0: *mut TSTree) {
@@ -55,16 +55,16 @@ pub unsafe extern "C" fn ts_tree_delete(mut self_0: *mut TSTree) {
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_root_node(mut self_0: *const TSTree) -> TSNode {
-    return ts_node_new(
+    ts_node_new(
         self_0,
         &(*self_0).root,
         ts_subtree_padding((*self_0).root),
         0 as os::raw::c_int as TSSymbol,
-    );
+    )
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_language(mut self_0: *const TSTree) -> *const TSLanguage {
-    return (*self_0).language;
+    (*self_0).language
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const TSInputEdit) {
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const 
         let mut range: *mut TSRange =
             &mut *(*self_0).included_ranges.offset(i as isize) as *mut TSRange;
         if (*range).end_byte >= (*edit).old_end_byte {
-            if (*range).end_byte != 4294967295 as os::raw::c_uint {
+            if (*range).end_byte != 4_294_967_295 as os::raw::c_uint {
                 (*range).end_byte = (*edit)
                     .new_end_byte
                     .wrapping_add((*range).end_byte.wrapping_sub((*edit).old_end_byte));
@@ -82,13 +82,10 @@ pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const 
                     point_sub((*range).end_point, (*edit).old_end_point),
                 );
                 if (*range).end_byte < (*edit).new_end_byte {
-                    (*range).end_byte = 4294967295 as os::raw::c_uint;
-                    (*range).end_point = {
-                        let mut init = TSPoint {
-                            row: 4294967295 as os::raw::c_uint,
-                            column: 4294967295 as os::raw::c_uint,
-                        };
-                        init
+                    (*range).end_byte = 4_294_967_295 as os::raw::c_uint;
+                    (*range).end_point = TSPoint {
+                        row: 4_294_967_295 as os::raw::c_uint,
+                        column: 4_294_967_295 as os::raw::c_uint,
                     }
                 }
             }
@@ -101,13 +98,10 @@ pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const 
                     point_sub((*range).start_point, (*edit).old_end_point),
                 );
                 if (*range).start_byte < (*edit).new_end_byte {
-                    (*range).start_byte = 4294967295 as os::raw::c_uint;
-                    (*range).start_point = {
-                        let mut init = TSPoint {
-                            row: 4294967295 as os::raw::c_uint,
-                            column: 4294967295 as os::raw::c_uint,
-                        };
-                        init
+                    (*range).start_byte = 4_294_967_295 as os::raw::c_uint;
+                    (*range).start_point = TSPoint {
+                        row: 4_294_967_295 as os::raw::c_uint,
+                        column: 4_294_967_295 as os::raw::c_uint,
                     }
                 }
             }
@@ -126,43 +120,28 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
     mut other: *const TSTree,
     mut count: *mut u32,
 ) -> *mut TSRange {
-    let mut cursor1: TreeCursor = {
-        let mut init = TreeCursor {
-            tree: std::ptr::null::<TSTree>(),
-            stack: {
-                let mut init = TreeCursorEntryArray {
-                    contents: std::ptr::null_mut::<TreeCursorEntry>(),
-                    size: 0 as os::raw::c_int as u32,
-                    capacity: 0 as os::raw::c_int as u32,
-                };
-                init
-            },
-        };
-        init
+    let mut cursor1 = TreeCursor {
+        tree: std::ptr::null::<TSTree>(),
+        stack: TreeCursorEntryArray {
+            contents: std::ptr::null_mut::<TreeCursorEntry>(),
+            size: 0 as os::raw::c_int as u32,
+            capacity: 0 as os::raw::c_int as u32,
+        },
     };
-    let mut cursor2: TreeCursor = {
-        let mut init = TreeCursor {
-            tree: std::ptr::null::<TSTree>(),
-            stack: {
-                let mut init = TreeCursorEntryArray {
-                    contents: std::ptr::null_mut::<TreeCursorEntry>(),
-                    size: 0 as os::raw::c_int as u32,
-                    capacity: 0 as os::raw::c_int as u32,
-                };
-                init
-            },
-        };
-        init
+    let mut cursor2 = TreeCursor {
+        tree: std::ptr::null::<TSTree>(),
+        stack: TreeCursorEntryArray {
+            contents: std::ptr::null_mut::<TreeCursorEntry>(),
+            size: 0 as os::raw::c_int as u32,
+            capacity: 0 as os::raw::c_int as u32,
+        },
     };
     ts_tree_cursor_init(&mut cursor1, ts_tree_root_node(self_0));
     ts_tree_cursor_init(&mut cursor2, ts_tree_root_node(other));
-    let mut included_range_differences: TSRangeArray = {
-        let mut init = TSRangeArray {
-            contents: std::ptr::null_mut::<TSRange>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    let mut included_range_differences = TSRangeArray {
+        contents: std::ptr::null_mut::<TSRange>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     ts_range_array_get_changed_ranges(
         (*self_0).included_ranges,
@@ -178,17 +157,17 @@ pub unsafe extern "C" fn ts_tree_get_changed_ranges(
         &mut cursor1,
         &mut cursor2,
         (*self_0).language,
-        &mut included_range_differences,
+        &included_range_differences,
         &mut result,
     );
     array__delete(&mut included_range_differences as *mut TSRangeArray as *mut VoidArray);
     array__delete(&mut cursor1.stack as *mut TreeCursorEntryArray as *mut VoidArray);
     array__delete(&mut cursor2.stack as *mut TreeCursorEntryArray as *mut VoidArray);
-    return result;
+    result
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ts_tree_get_cached_parent(
+pub(crate) unsafe extern "C" fn ts_tree_get_cached_parent(
     mut self_0: *const TSTree,
     mut node: *const TSNode,
 ) -> TSNode {
@@ -210,15 +189,15 @@ pub unsafe extern "C" fn ts_tree_get_cached_parent(
         }
         i = i.wrapping_add(1)
     }
-    return ts_node_new(
+    ts_node_new(
         std::ptr::null::<TSTree>(),
         std::ptr::null::<Subtree>(),
         length_zero(),
         0 as os::raw::c_int as TSSymbol,
-    );
+    )
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_tree_set_cached_parent(
+pub(crate) unsafe extern "C" fn ts_tree_set_cached_parent(
     mut _self: *const TSTree,
     mut node: *const TSNode,
     mut parent: *const TSNode,
@@ -234,26 +213,17 @@ pub unsafe extern "C" fn ts_tree_set_cached_parent(
         .parent_cache_start
         .wrapping_add((*self_0).parent_cache_size)
         .wrapping_rem(PARENT_CACHE_CAPACITY);
-    *(*self_0).parent_cache.offset(index as isize) = {
-        let mut init = ParentCacheEntry {
-            child: (*node).id as *const Subtree,
-            parent: (*parent).id as *const Subtree,
-            position: {
-                let mut init = Length {
-                    bytes: (*parent).context[0 as os::raw::c_int as usize],
-                    extent: {
-                        let mut init = TSPoint {
-                            row: (*parent).context[1 as os::raw::c_int as usize],
-                            column: (*parent).context[2 as os::raw::c_int as usize],
-                        };
-                        init
-                    },
-                };
-                init
+    *(*self_0).parent_cache.offset(index as isize) = ParentCacheEntry {
+        child: (*node).id as *const Subtree,
+        parent: (*parent).id as *const Subtree,
+        position: Length {
+            bytes: (*parent).context[0 as os::raw::c_int as usize],
+            extent: TSPoint {
+                row: (*parent).context[1 as os::raw::c_int as usize],
+                column: (*parent).context[2 as os::raw::c_int as usize],
             },
-            alias_symbol: (*parent).context[3 as os::raw::c_int as usize] as TSSymbol,
-        };
-        init
+        },
+        alias_symbol: (*parent).context[3 as os::raw::c_int as usize] as TSSymbol,
     };
     if (*self_0).parent_cache_size == PARENT_CACHE_CAPACITY {
         (*self_0).parent_cache_start = (*self_0).parent_cache_start.wrapping_add(1)
