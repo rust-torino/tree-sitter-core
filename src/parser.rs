@@ -129,15 +129,15 @@ unsafe extern "C" fn ts_parser__breakdown_top_of_stack(
     mut self_0: *mut TSParser,
     mut version: StackVersion,
 ) -> bool {
-    let mut did_break_down: bool = 0 as os::raw::c_int != 0;
-    let mut pending: bool = 0 as os::raw::c_int != 0;
+    let mut did_break_down: bool = false;
+    let mut pending: bool = false;
     loop {
         let mut pop: StackSliceArray = ts_stack_pop_pending((*self_0).stack, version);
         if pop.size == 0 {
             break;
         }
-        did_break_down = 1 as os::raw::c_int != 0;
-        pending = 0 as os::raw::c_int != 0;
+        did_break_down = true;
+        pending = false;
         let mut i: u32 = 0 as os::raw::c_int as u32;
         while i < pop.size {
             let mut slice: StackSlice = *pop.contents.offset(i as isize);
@@ -172,7 +172,7 @@ unsafe extern "C" fn ts_parser__breakdown_top_of_stack(
                     (*self_0).stack,
                     slice.version,
                     tree,
-                    0 as os::raw::c_int != 0,
+                    false,
                     state,
                 );
                 j_0 = j_0.wrapping_add(1)
@@ -212,7 +212,7 @@ unsafe extern "C" fn ts_parser__breakdown_lookahead(
     mut state: TSStateId,
     mut reusable_node: *mut ReusableNode,
 ) {
-    let mut did_descend: bool = 0 as os::raw::c_int != 0;
+    let mut did_descend: bool = false;
     let mut tree: Subtree = reusable_node_tree(reusable_node);
     while ts_subtree_child_count(tree) > 0 as os::raw::c_int as os::raw::c_uint
         && ts_subtree_parse_state(tree) as os::raw::c_int != state as os::raw::c_int
@@ -233,7 +233,7 @@ unsafe extern "C" fn ts_parser__breakdown_lookahead(
         }
         reusable_node_descend(reusable_node);
         tree = reusable_node_tree(reusable_node);
-        did_descend = 1 as os::raw::c_int != 0
+        did_descend = true
     }
     if did_descend {
         ts_subtree_release(&mut (*self_0).tree_pool, *lookahead);
@@ -334,10 +334,10 @@ unsafe extern "C" fn ts_parser__better_version_exists(
         {
             let mut status_i: ErrorStatus = ts_parser__version_status(self_0, i);
             match ts_parser__compare_versions(self_0, status, status_i) as os::raw::c_uint {
-                4 => return 1 as os::raw::c_int != 0,
+                4 => return true,
                 3 => {
                     if ts_stack_can_merge((*self_0).stack, i, version) {
-                        return 1 as os::raw::c_int != 0;
+                        return true;
                     }
                 }
                 _ => {}
@@ -393,7 +393,7 @@ unsafe extern "C" fn ts_parser__can_reuse_first_leaf(
     if current_lex_mode.lex_state as os::raw::c_int
         == -(1 as os::raw::c_int) as u16 as os::raw::c_int
     {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     // If the token was created in a state with the same set of lookaheads, it is reusable.
     if (*table_entry).action_count > 0 as os::raw::c_int as os::raw::c_uint
@@ -403,13 +403,13 @@ unsafe extern "C" fn ts_parser__can_reuse_first_leaf(
             || !ts_subtree_is_keyword(tree)
                 && ts_subtree_parse_state(tree) as os::raw::c_int == state as os::raw::c_int)
     {
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     // Empty tokens are not reusable in states with different lookaheads.
     if ts_subtree_size(tree).bytes == 0 as os::raw::c_int as os::raw::c_uint
         && leaf_symbol as os::raw::c_int != 0 as os::raw::c_int
     {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     // If the current state allows external tokens or other tokens that conflict with this
     // token, this token is not reusable.
@@ -433,9 +433,9 @@ unsafe extern "C" fn ts_parser__lex(
         (*self_0).language,
         lex_mode.external_lex_state as os::raw::c_uint,
     );
-    let mut found_external_token: bool = 0 as os::raw::c_int != 0;
+    let mut found_external_token: bool = false;
     let mut error_mode: bool = parse_state as os::raw::c_int == 0 as os::raw::c_int;
-    let mut skipped_error: bool = 0 as os::raw::c_int != 0;
+    let mut skipped_error: bool = false;
     let mut first_error_character: i32 = 0 as os::raw::c_int;
     let mut error_start_position: Length = length_zero();
     let mut error_end_position: Length = length_zero();
@@ -486,7 +486,7 @@ unsafe extern "C" fn ts_parser__lex(
                             as os::raw::c_int
                             != 0)
             {
-                found_external_token = 1 as os::raw::c_int != 0;
+                found_external_token = true;
                 break;
             } else {
                 ts_lexer_reset(&mut (*self_0).lexer, current_position);
@@ -515,7 +515,7 @@ unsafe extern "C" fn ts_parser__lex(
             break;
         }
         if !error_mode {
-            error_mode = 1 as os::raw::c_int != 0;
+            error_mode = true;
             lex_mode = *(*(*self_0).language)
                 .lex_modes
                 .offset(0 as os::raw::c_int as isize);
@@ -535,7 +535,7 @@ unsafe extern "C" fn ts_parser__lex(
                     .unwrap();
                     ts_parser__log(self_0);
                 }
-                skipped_error = 1 as os::raw::c_int != 0;
+                skipped_error = true;
                 error_start_position = (*self_0).lexer.token_start_position;
                 error_end_position = (*self_0).lexer.token_start_position;
                 first_error_character = (*self_0).lexer.data.lookahead
@@ -553,7 +553,7 @@ unsafe extern "C" fn ts_parser__lex(
                         .advance
                         .expect("non-null function pointer")(
                         &mut (*self_0).lexer.data,
-                        0 as os::raw::c_int != 0,
+                        false,
                     );
                 }
             }
@@ -604,7 +604,7 @@ unsafe extern "C" fn ts_parser__lex(
         if (*self_0).lexer.token_end_position.bytes < (*self_0).lexer.token_start_position.bytes {
             (*self_0).lexer.token_start_position = (*self_0).lexer.token_end_position
         }
-        let mut is_keyword: bool = 0 as os::raw::c_int != 0;
+        let mut is_keyword: bool = false;
         let mut symbol: TSSymbol = (*self_0).lexer.data.result_symbol;
         let mut padding_0: Length =
             length_sub((*self_0).lexer.token_start_position, start_position);
@@ -641,7 +641,7 @@ unsafe extern "C" fn ts_parser__lex(
                 ) as os::raw::c_int
                     != 0
             {
-                is_keyword = 1 as os::raw::c_int != 0;
+                is_keyword = true;
                 symbol = (*self_0).lexer.data.result_symbol
             }
         }
@@ -930,10 +930,10 @@ unsafe extern "C" fn ts_parser__select_tree(
     mut right: Subtree,
 ) -> bool {
     if left.ptr.is_null() {
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     if right.ptr.is_null() {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if ts_subtree_error_cost(right) < ts_subtree_error_cost(left) {
         if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -955,7 +955,7 @@ unsafe extern "C" fn ts_parser__select_tree(
             .unwrap();
             ts_parser__log(self_0);
         }
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     if ts_subtree_error_cost(left) < ts_subtree_error_cost(right) {
         if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -977,7 +977,7 @@ unsafe extern "C" fn ts_parser__select_tree(
             .unwrap();
             ts_parser__log(self_0);
         }
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if ts_subtree_dynamic_precedence(right) > ts_subtree_dynamic_precedence(left) {
         if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -1001,7 +1001,7 @@ unsafe extern "C" fn ts_parser__select_tree(
             .unwrap();
             ts_parser__log(self_0);
         }
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     if ts_subtree_dynamic_precedence(left) > ts_subtree_dynamic_precedence(right) {
         if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
@@ -1025,10 +1025,10 @@ unsafe extern "C" fn ts_parser__select_tree(
             .unwrap();
             ts_parser__log(self_0);
         }
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if ts_subtree_error_cost(left) > 0 as os::raw::c_int as os::raw::c_uint {
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     let mut comparison: os::raw::c_int = ts_subtree_compare(left, right);
     match comparison {
@@ -1253,14 +1253,14 @@ unsafe extern "C" fn ts_parser__reduce(
             let mut next_state: TSStateId =
                 ts_language_next_state((*self_0).language, state, symbol);
             if is_extra {
-                (*parent.ptr).set_extra(1 as os::raw::c_int != 0)
+                (*parent.ptr).set_extra(true)
             }
             if is_fragile as os::raw::c_int != 0
                 || pop.size > 1 as os::raw::c_int as os::raw::c_uint
                 || initial_version_count > 1 as os::raw::c_int as os::raw::c_uint
             {
-                (*parent.ptr).set_fragile_left(1 as os::raw::c_int != 0);
-                (*parent.ptr).set_fragile_right(1 as os::raw::c_int != 0);
+                (*parent.ptr).set_fragile_left(true);
+                (*parent.ptr).set_fragile_right(true);
                 (*parent.ptr).parse_state = TS_TREE_STATE_NONE
             } else {
                 (*parent.ptr).parse_state = state
@@ -1271,7 +1271,7 @@ unsafe extern "C" fn ts_parser__reduce(
                 (*self_0).stack,
                 slice_version,
                 ts_subtree_from_mut(parent),
-                0 as os::raw::c_int != 0,
+                false,
                 next_state,
             );
             let mut j: u32 = (*parent.ptr).child_count;
@@ -1280,7 +1280,7 @@ unsafe extern "C" fn ts_parser__reduce(
                     (*self_0).stack,
                     slice_version,
                     *slice.subtrees.contents.offset(j as isize),
-                    0 as os::raw::c_int != 0,
+                    false,
                     next_state,
                 );
                 j = j.wrapping_add(1)
@@ -1313,7 +1313,7 @@ unsafe extern "C" fn ts_parser__accept(
         (*self_0).stack,
         version,
         lookahead,
-        0 as os::raw::c_int != 0,
+        false,
         1 as os::raw::c_int as TSStateId,
     );
     let mut pop: StackSliceArray = ts_stack_pop_all((*self_0).stack, version);
@@ -1387,7 +1387,7 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
     mut lookahead_symbol: TSSymbol,
 ) -> bool {
     let mut initial_version_count: u32 = ts_stack_version_count((*self_0).stack);
-    let mut can_shift_lookahead_symbol: bool = 0 as os::raw::c_int != 0;
+    let mut can_shift_lookahead_symbol: bool = false;
     let mut version: StackVersion = starting_version;
     let mut current_block_33: u64;
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
@@ -1396,11 +1396,11 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
         if version >= version_count {
             break;
         }
-        let mut merged: bool = 0 as os::raw::c_int != 0;
+        let mut merged: bool = false;
         let mut i_0: StackVersion = initial_version_count;
         while i_0 < version {
             if ts_stack_merge((*self_0).stack, i_0, version) {
-                merged = 1 as os::raw::c_int != 0;
+                merged = true;
                 break;
             } else {
                 i_0 = i_0.wrapping_add(1)
@@ -1408,7 +1408,7 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
         }
         if !merged {
             let mut state: TSStateId = ts_stack_state((*self_0).stack, version);
-            let mut has_shift_action: bool = 0 as os::raw::c_int != 0;
+            let mut has_shift_action: bool = false;
             (*self_0).reduce_actions.size = 0 as os::raw::c_int as u32;
             let mut first_symbol: TSSymbol = 0;
             let mut end_symbol: TSSymbol = 0;
@@ -1435,7 +1435,7 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
                             if !action.params.c2rust_unnamed.extra()
                                 && !action.params.c2rust_unnamed.repetition()
                             {
-                                has_shift_action = 1 as os::raw::c_int != 0
+                                has_shift_action = true
                             }
                         }
                         1 => {
@@ -1476,13 +1476,13 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
                     action_0.count,
                     action_0.dynamic_precedence,
                     action_0.production_id,
-                    1 as os::raw::c_int != 0,
-                    0 as os::raw::c_int != 0,
+                    true,
+                    false,
                 );
                 i_2 = i_2.wrapping_add(1)
             }
             if has_shift_action {
-                can_shift_lookahead_symbol = 1 as os::raw::c_int != 0;
+                can_shift_lookahead_symbol = true;
                 current_block_33 = 13_619_784_596_304_402_172;
             } else if reduction_version != -(1 as os::raw::c_int) as StackVersion
                 && i < MAX_VERSION_COUNT
@@ -1524,7 +1524,7 @@ unsafe extern "C" fn ts_parser__handle_error(
     let mut position: Length = ts_stack_position((*self_0).stack, version);
     // Push a discontinuity onto the stack. Merge all of the stack versions that
     // were created in the previous step.
-    let mut did_insert_missing_token: bool = 0 as os::raw::c_int != 0;
+    let mut did_insert_missing_token: bool = false;
     let mut v: StackVersion = version;
     while v < version_count {
         if !did_insert_missing_token {
@@ -1560,7 +1560,7 @@ unsafe extern "C" fn ts_parser__handle_error(
                         (*self_0).stack,
                         version_with_missing_tree,
                         missing_tree,
-                        0 as os::raw::c_int != 0,
+                        false,
                         state_after_missing_symbol,
                     );
                     if ts_parser__do_all_potential_reductions(
@@ -1586,7 +1586,7 @@ unsafe extern "C" fn ts_parser__handle_error(
                             .unwrap();
                             ts_parser__log(self_0);
                         }
-                        did_insert_missing_token = 1 as os::raw::c_int != 0;
+                        did_insert_missing_token = true;
                         break;
                     }
                 }
@@ -1599,7 +1599,7 @@ unsafe extern "C" fn ts_parser__handle_error(
             Subtree {
                 ptr: std::ptr::null::<SubtreeHeapData>(),
             },
-            0 as os::raw::c_int != 0,
+            false,
             0 as os::raw::c_int as TSStateId,
         );
         v = if v == version {
@@ -1684,14 +1684,14 @@ unsafe extern "C" fn ts_parser__recover_to_state(
                 let mut error: Subtree = ts_subtree_new_error_node(
                     &mut (*self_0).tree_pool,
                     &mut slice.subtrees,
-                    1 as os::raw::c_int != 0,
+                    true,
                     (*self_0).language,
                 );
                 ts_stack_push(
                     (*self_0).stack,
                     slice.version,
                     error,
-                    0 as os::raw::c_int != 0,
+                    false,
                     goal_state,
                 );
             } else {
@@ -1704,7 +1704,7 @@ unsafe extern "C" fn ts_parser__recover_to_state(
                     (*self_0).stack,
                     slice.version,
                     tree,
-                    0 as os::raw::c_int != 0,
+                    false,
                     goal_state,
                 );
                 j_0 = j_0.wrapping_add(1)
@@ -1721,7 +1721,7 @@ unsafe extern "C" fn ts_parser__recover(
     mut version: StackVersion,
     mut lookahead: Subtree,
 ) {
-    let mut did_recover: bool = 0 as os::raw::c_int != 0;
+    let mut did_recover: bool = false;
     let mut previous_version_count: os::raw::c_uint = ts_stack_version_count((*self_0).stack);
     let mut position: Length = ts_stack_position((*self_0).stack, version);
     let mut summary: *mut StackSummary = ts_stack_get_summary((*self_0).stack, version);
@@ -1752,14 +1752,14 @@ unsafe extern "C" fn ts_parser__recover(
                     depth = depth.wrapping_add(1)
                 }
                 // Do not recover in ways that create redundant stack versions.
-                let mut would_merge: bool = 0 as os::raw::c_int != 0;
+                let mut would_merge: bool = false;
                 let mut j: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
                 while j < previous_version_count {
                     if ts_stack_state((*self_0).stack, j) as os::raw::c_int
                         == entry.state as os::raw::c_int
                         && ts_stack_position((*self_0).stack, j).bytes == position.bytes
                     {
-                        would_merge = 1 as os::raw::c_int != 0;
+                        would_merge = true;
                         break;
                     } else {
                         j = j.wrapping_add(1)
@@ -1785,7 +1785,7 @@ unsafe extern "C" fn ts_parser__recover(
                     if ts_parser__better_version_exists(
                         self_0,
                         version,
-                        0 as os::raw::c_int != 0,
+                        false,
                         new_cost,
                     ) {
                         break;
@@ -1798,7 +1798,7 @@ unsafe extern "C" fn ts_parser__recover(
                         ts_subtree_symbol(lookahead),
                     ) && ts_parser__recover_to_state(self_0, version, depth, entry.state)
                     {
-                        did_recover = 1 as os::raw::c_int != 0;
+                        did_recover = true;
                         if (*self_0).lexer.logger.log.is_some()
                             || (*self_0).dot_graph_file.is_valid()
                         {
@@ -1870,14 +1870,14 @@ unsafe extern "C" fn ts_parser__recover(
         let mut parent: Subtree = ts_subtree_new_error_node(
             &mut (*self_0).tree_pool,
             &mut children,
-            0 as os::raw::c_int != 0,
+            false,
             (*self_0).language,
         );
         ts_stack_push(
             (*self_0).stack,
             version,
             parent,
-            0 as os::raw::c_int != 0,
+            false,
             1 as os::raw::c_int as TSStateId,
         );
         ts_parser__accept(self_0, version, lookahead);
@@ -1888,7 +1888,7 @@ unsafe extern "C" fn ts_parser__recover(
         .wrapping_add(100)
         .wrapping_add(ts_subtree_total_bytes(lookahead).wrapping_mul(1))
         .wrapping_add(ts_subtree_total_size(lookahead).extent.row.wrapping_mul(30));
-    if ts_parser__better_version_exists(self_0, version, 0 as os::raw::c_int != 0, new_cost_0) {
+    if ts_parser__better_version_exists(self_0, version, false, new_cost_0) {
         ts_stack_halt((*self_0).stack, version);
         ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
         return;
@@ -2022,7 +2022,7 @@ unsafe extern "C" fn ts_parser__recover(
         (*self_0).stack,
         version,
         ts_subtree_from_mut(error_repeat),
-        0 as os::raw::c_int != 0,
+        false,
         0 as os::raw::c_int as TSStateId,
     );
     if ts_subtree_has_external_tokens(lookahead) {
@@ -2041,7 +2041,7 @@ unsafe extern "C" fn ts_parser__advance(
     let mut state: TSStateId = ts_stack_state((*self_0).stack, version);
     let mut position: u32 = ts_stack_position((*self_0).stack, version).bytes;
     let mut last_external_token: Subtree = ts_stack_last_external_token((*self_0).stack, version);
-    let mut did_reuse: bool = 1 as os::raw::c_int != 0;
+    let mut did_reuse: bool = true;
     let mut lookahead: Subtree = Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };
@@ -2064,7 +2064,7 @@ unsafe extern "C" fn ts_parser__advance(
     // If no node from the previous syntax tree could be reused, then try to
     // reuse the token previously returned by the lexer.
     if lookahead.ptr.is_null() {
-        did_reuse = 0 as os::raw::c_int != 0;
+        did_reuse = false;
         lookahead = ts_parser__get_cached_token(
             self_0,
             state,
@@ -2113,7 +2113,7 @@ unsafe extern "C" fn ts_parser__advance(
                     .unwrap_or(false))
         {
             ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
         // Process each parse action for the current lookahead token in
         // the current state. If there are multiple actions, then this is
@@ -2192,7 +2192,7 @@ unsafe extern "C" fn ts_parser__advance(
                                 if did_reuse {
                                     reusable_node_advance(&mut (*self_0).reusable_node);
                                 }
-                                return 1 as os::raw::c_int != 0;
+                                return true;
                             }
                         }
                     }
@@ -2237,7 +2237,7 @@ unsafe extern "C" fn ts_parser__advance(
                         ts_parser__log(self_0);
                     }
                     ts_parser__accept(self_0, version, lookahead);
-                    return 1 as os::raw::c_int != 0;
+                    return true;
                 }
                 3 => {
                     if ts_subtree_child_count(lookahead) > 0 as os::raw::c_int as os::raw::c_uint {
@@ -2252,7 +2252,7 @@ unsafe extern "C" fn ts_parser__advance(
                     if did_reuse {
                         reusable_node_advance(&mut (*self_0).reusable_node);
                     }
-                    return 1 as os::raw::c_int != 0;
+                    return true;
                 }
                 _ => {}
             }
@@ -2334,7 +2334,7 @@ unsafe extern "C" fn ts_parser__advance(
             // TODO - can this be unified with the other `RECOVER` case above?
             if state as os::raw::c_int == 0 as os::raw::c_int {
                 ts_parser__recover(self_0, version, lookahead);
-                return 1 as os::raw::c_int != 0;
+                return true;
             }
             // If the current lookahead token is not valid and the previous
             // subtree on the stack was reused from an old tree, it isn't actually
@@ -2360,12 +2360,12 @@ unsafe extern "C" fn ts_parser__advance(
             }
             ts_stack_pause((*self_0).stack, version, ts_subtree_leaf_symbol(lookahead));
             ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
-            return 1 as os::raw::c_int != 0;
+            return true;
         }
     }
 }
 unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os::raw::c_uint {
-    let mut made_changes: bool = 0 as os::raw::c_int != 0;
+    let mut made_changes: bool = false;
     let mut min_error_cost: os::raw::c_uint = (2_147_483_647 as os::raw::c_int as os::raw::c_uint)
         .wrapping_mul(2)
         .wrapping_add(1);
@@ -2390,20 +2390,20 @@ unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os:
                 let mut status_j: ErrorStatus = ts_parser__version_status(self_0, j);
                 match ts_parser__compare_versions(self_0, status_j, status_i) as os::raw::c_uint {
                     0 => {
-                        made_changes = 1 as os::raw::c_int != 0;
+                        made_changes = true;
                         ts_stack_remove_version((*self_0).stack, i);
                         i = i.wrapping_sub(1);
                         j = i
                     }
                     1 | 2 => {
                         if ts_stack_merge((*self_0).stack, j, i) {
-                            made_changes = 1 as os::raw::c_int != 0;
+                            made_changes = true;
                             i = i.wrapping_sub(1);
                             j = i
                         }
                     }
                     3 => {
-                        made_changes = 1 as os::raw::c_int != 0;
+                        made_changes = true;
                         if ts_stack_merge((*self_0).stack, j, i) {
                             i = i.wrapping_sub(1);
                             j = i
@@ -2412,7 +2412,7 @@ unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os:
                         }
                     }
                     4 => {
-                        made_changes = 1 as os::raw::c_int != 0;
+                        made_changes = true;
                         ts_stack_remove_version((*self_0).stack, j);
                         i = i.wrapping_sub(1);
                         j = j.wrapping_sub(1)
@@ -2428,13 +2428,13 @@ unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os:
     // discarding the least promising versions.
     while ts_stack_version_count((*self_0).stack) > MAX_VERSION_COUNT {
         ts_stack_remove_version((*self_0).stack, MAX_VERSION_COUNT);
-        made_changes = 1 as os::raw::c_int != 0
+        made_changes = true
     }
     // If the best-performing stack version is currently paused, or all
     // versions are paused, then resume the best paused version and begin
     // the error recovery process. Otherwise, remove the paused versions.
     if ts_stack_version_count((*self_0).stack) > 0 as os::raw::c_int as os::raw::c_uint {
-        let mut has_unpaused_version: bool = 0 as os::raw::c_int != 0;
+        let mut has_unpaused_version: bool = false;
         let mut i_0: StackVersion = 0 as os::raw::c_int as StackVersion;
         let mut n: StackVersion = ts_stack_version_count((*self_0).stack);
         while i_0 < n {
@@ -2453,14 +2453,14 @@ unsafe extern "C" fn ts_parser__condense_stack(mut self_0: *mut TSParser) -> os:
                     min_error_cost = ts_stack_error_cost((*self_0).stack, i_0);
                     let mut lookahead_symbol: TSSymbol = ts_stack_resume((*self_0).stack, i_0);
                     ts_parser__handle_error(self_0, i_0, lookahead_symbol);
-                    has_unpaused_version = 1 as os::raw::c_int != 0
+                    has_unpaused_version = true
                 } else {
                     ts_stack_remove_version((*self_0).stack, i_0);
                     i_0 = i_0.wrapping_sub(1);
                     n = n.wrapping_sub(1)
                 }
             } else {
-                has_unpaused_version = 1 as os::raw::c_int != 0
+                has_unpaused_version = true
             }
             i_0 = i_0.wrapping_add(1)
         }

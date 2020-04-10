@@ -206,7 +206,7 @@ unsafe extern "C" fn stream_advance(mut self_0: *mut Stream) -> bool {
         );
         if size > 0 as os::raw::c_int as os::raw::c_uint {
             (*self_0).next_size = size as u8;
-            return 1 as os::raw::c_int != 0;
+            return true;
         }
     } else {
         (*self_0).next_size = 0 as os::raw::c_int as u8;
@@ -455,7 +455,7 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
     // Copy the contents of the literal into the characters buffer, processing escape
     // sequences like \n and \". This needs to be done before checking if the literal
     // is already present, in order to do the string comparison.
-    let mut is_escaped: bool = 0 as os::raw::c_int != 0;
+    let mut is_escaped: bool = false;
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     while i < escaped_length {
         let mut src: *const os::raw::c_char =
@@ -473,10 +473,10 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
                 48 => *dest = '\u{0}' as i32 as os::raw::c_char,
                 _ => *dest = *src,
             }
-            is_escaped = 0 as os::raw::c_int != 0;
+            is_escaped = false;
             slice.length = slice.length.wrapping_add(1)
         } else if *src as os::raw::c_int == '\\' as i32 {
-            is_escaped = 1 as os::raw::c_int != 0
+            is_escaped = true
         } else {
             *dest = *src;
             slice.length = slice.length.wrapping_add(1)
@@ -527,7 +527,7 @@ unsafe extern "C" fn query_step__new(
         capture_ids: [NONE, NONE, NONE, NONE],
     };
     init.set_depth(depth);
-    init.set_contains_captures(0 as os::raw::c_int != 0);
+    init.set_contains_captures(false);
     init.set_is_immediate(is_immediate);
     init.set_is_last(false);
     init
@@ -593,7 +593,7 @@ unsafe extern "C" fn ts_query__pattern_map_search(
     let mut size: u32 = (*self_0).pattern_map.size.wrapping_sub(base_index);
     if size == 0 as os::raw::c_int as os::raw::c_uint {
         *result = base_index;
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     while size > 1 as os::raw::c_int as os::raw::c_uint {
         let mut half_size: u32 = size.wrapping_div(2);
@@ -655,9 +655,9 @@ unsafe extern "C" fn ts_query__finalize_steps(mut self_0: *mut TSQuery) {
         if (*step).capture_ids[0 as os::raw::c_int as usize] as os::raw::c_int
             != NONE as os::raw::c_int
         {
-            (*step).set_contains_captures(1 as os::raw::c_int != 0)
+            (*step).set_contains_captures(true)
         } else {
-            (*step).set_contains_captures(0 as os::raw::c_int != 0);
+            (*step).set_contains_captures(false);
             let mut j: os::raw::c_uint = i.wrapping_add(1);
             while j < (*self_0).steps.size {
                 let mut s: *mut QueryStep =
@@ -670,7 +670,7 @@ unsafe extern "C" fn ts_query__finalize_steps(mut self_0: *mut TSQuery) {
                 if (*s).capture_ids[0 as os::raw::c_int as usize] as os::raw::c_int
                     != NONE as os::raw::c_int
                 {
-                    (*step).set_contains_captures(1 as os::raw::c_int != 0)
+                    (*step).set_contains_captures(true)
                 }
                 j = j.wrapping_add(1)
             }
@@ -775,13 +775,13 @@ unsafe extern "C" fn ts_query__parse_predicate(
                 stream_advance(stream);
                 // Parse a string literal
                 // Parse the string content
-                let mut is_escaped: bool = 0 as os::raw::c_int != 0;
+                let mut is_escaped: bool = false;
                 let mut string_content: *const os::raw::c_char = (*stream).input;
                 loop {
                     if is_escaped {
-                        is_escaped = 0 as os::raw::c_int != 0
+                        is_escaped = false
                     } else if (*stream).next == '\\' as i32 {
-                        is_escaped = 1 as os::raw::c_int != 0
+                        is_escaped = true
                     } else {
                         if (*stream).next == '\"' as i32 {
                             break;
@@ -952,7 +952,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
                     (*self_0).language,
                     node_name,
                     length,
-                    1 as os::raw::c_int != 0,
+                    true,
                 );
                 if symbol == 0 {
                     stream_reset(stream, node_name);
@@ -974,11 +974,11 @@ unsafe extern "C" fn ts_query__parse_pattern(
                 query_step__new(symbol, depth as u16, is_immediate);
             // Parse the child patterns
             stream_skip_whitespace(stream);
-            let mut child_is_immediate: bool = 0 as os::raw::c_int != 0;
+            let mut child_is_immediate: bool = false;
             let mut child_start_step_index: u16 = (*self_0).steps.size as u16;
             loop {
                 if (*stream).next == '.' as i32 {
-                    child_is_immediate = 1 as os::raw::c_int != 0;
+                    child_is_immediate = true;
                     stream_advance(stream);
                     stream_skip_whitespace(stream);
                 }
@@ -995,7 +995,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
                             .steps
                             .contents
                             .offset(child_start_step_index as isize));
-                        (*fresh12).set_is_last(1 as os::raw::c_int != 0)
+                        (*fresh12).set_is_last(true)
                     }
                     stream_advance(stream);
                     break;
@@ -1003,7 +1003,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
                     if e_1 as u64 != 0 {
                         return e_1;
                     }
-                    child_is_immediate = 0 as os::raw::c_int != 0
+                    child_is_immediate = false
                 }
             }
         } else if (*stream).next == '\"' as i32 {
@@ -1028,7 +1028,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
                 (*self_0).language,
                 string_content,
                 length_0,
-                0 as os::raw::c_int != 0,
+                false,
             );
             if symbol_0 == 0 {
                 stream_reset(stream, string_content);
@@ -1238,7 +1238,7 @@ pub unsafe extern "C" fn ts_query_new(
             &mut stream,
             0 as os::raw::c_int as u32,
             &mut capture_count,
-            0 as os::raw::c_int != 0,
+            false,
         );
         array__grow(
             &mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray,
@@ -1250,7 +1250,7 @@ pub unsafe extern "C" fn ts_query_new(
         *(*self_0).steps.contents.offset(fresh17 as isize) = query_step__new(
             0 as os::raw::c_int as TSSymbol,
             PATTERN_DONE_MARKER as u16,
-            0 as os::raw::c_int != 0,
+            false,
         );
         // If any pattern could not be parsed, then report the error information
         // and terminate.
@@ -1437,7 +1437,7 @@ pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
             row: 4_294_967_295 as os::raw::c_uint,
             column: 4_294_967_295 as os::raw::c_uint,
         },
-        ascending: 0 as os::raw::c_int != 0,
+        ascending: false,
     };
     array__reserve(
         &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
@@ -1473,7 +1473,7 @@ pub unsafe extern "C" fn ts_query_cursor_exec(
     capture_list_pool_reset(&mut (*self_0).capture_list_pool, (*query).max_capture_count);
     (*self_0).next_state_id = 0 as os::raw::c_int as u32;
     (*self_0).depth = 0 as os::raw::c_int as u32;
-    (*self_0).ascending = 0 as os::raw::c_int != 0;
+    (*self_0).ascending = false;
     (*self_0).query = query;
 }
 #[no_mangle]
@@ -1518,7 +1518,7 @@ unsafe extern "C" fn ts_query_cursor__first_in_progress_capture(
     mut byte_offset: *mut u32,
     mut pattern_index: *mut u32,
 ) -> bool {
-    let mut result: bool = 0 as os::raw::c_int != 0;
+    let mut result: bool = false;
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     while i < (*self_0).states.size {
         let mut state: *const QueryState =
@@ -1533,7 +1533,7 @@ unsafe extern "C" fn ts_query_cursor__first_in_progress_capture(
                 || capture_byte == *byte_offset
                     && ((*state).pattern_index as os::raw::c_uint) < *pattern_index
             {
-                result = 1 as os::raw::c_int != 0;
+                result = true;
                 *state_index = i;
                 *byte_offset = capture_byte;
                 *pattern_index = (*state).pattern_index as u32
@@ -1666,7 +1666,7 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
             (*self_0).states.size = ((*self_0).states.size as os::raw::c_uint)
                 .wrapping_sub(deleted_count) as u32 as u32;
             if ts_tree_cursor_goto_next_sibling(&mut (*self_0).cursor) {
-                (*self_0).ascending = 0 as os::raw::c_int != 0
+                (*self_0).ascending = false
             } else if ts_tree_cursor_goto_parent(&mut (*self_0).cursor) {
                 (*self_0).depth = (*self_0).depth.wrapping_sub(1)
             } else {
@@ -1694,7 +1694,7 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                 || point_lte(ts_node_end_point(node), (*self_0).start_point) as os::raw::c_int != 0
             {
                 if !ts_tree_cursor_goto_next_sibling(&mut (*self_0).cursor) {
-                    (*self_0).ascending = 1 as os::raw::c_int != 0
+                    (*self_0).ascending = true
                 }
             } else {
                 // If this node is after the selected range, then stop walking.
@@ -1702,7 +1702,7 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                     || point_lte((*self_0).end_point, ts_node_start_point(node)) as os::raw::c_int
                         != 0
                 {
-                    return 0 as os::raw::c_int != 0;
+                    return false;
                 }
                 // Add new states for any patterns whose root node is a wildcard.
                 let mut i_0: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
@@ -1795,20 +1795,20 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                         if (*step_2).is_immediate() as os::raw::c_int != 0
                             && is_named as os::raw::c_int != 0
                         {
-                            later_sibling_can_match = 0 as os::raw::c_int != 0
+                            later_sibling_can_match = false
                         }
                         if (*step_2).is_last() as os::raw::c_int != 0
                             && has_later_siblings as os::raw::c_int != 0
                         {
-                            node_does_match = 0 as os::raw::c_int != 0
+                            node_does_match = false
                         }
                         if (*step_2).field != 0 {
                             if (*step_2).field as os::raw::c_int == field_id as os::raw::c_int {
                                 if !can_have_later_siblings_with_this_field {
-                                    later_sibling_can_match = 0 as os::raw::c_int != 0
+                                    later_sibling_can_match = false
                                 }
                             } else {
-                                node_does_match = 0 as os::raw::c_int != 0
+                                node_does_match = false
                             }
                         }
                         if !node_does_match {
@@ -1912,7 +1912,7 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                 if ts_tree_cursor_goto_first_child(&mut (*self_0).cursor) {
                     (*self_0).depth = (*self_0).depth.wrapping_add(1)
                 } else {
-                    (*self_0).ascending = 1 as os::raw::c_int != 0
+                    (*self_0).ascending = true
                 }
             }
         }
@@ -2058,7 +2058,7 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
                 *capture_index = (*state_0).consumed_capture_count as u32;
                 (*state_0).consumed_capture_count =
                     (*state_0).consumed_capture_count.wrapping_add(1);
-                return 1 as os::raw::c_int != 0;
+                return true;
             }
             if capture_list_pool_is_empty(&(*self_0).capture_list_pool) {
                 capture_list_pool_release(
@@ -2079,7 +2079,7 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
         // If there are no finished matches that are ready to be returned, then
         // continue finding more matches.
         if !ts_query_cursor__advance(self_0) {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
     }
 }

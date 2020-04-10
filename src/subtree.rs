@@ -312,12 +312,12 @@ pub(crate) unsafe extern "C" fn ts_subtree_new_leaf(
                     padding_columns: padding.extent.column as u8,
                     parse_state,
                 };
-                init.set_is_inline(1 as os::raw::c_int != 0);
+                init.set_is_inline(true);
                 init.set_visible(metadata.visible());
                 init.set_named(metadata.named());
                 init.set_extra(extra);
-                init.set_has_changes(0 as os::raw::c_int != 0);
-                init.set_is_missing(0 as os::raw::c_int != 0);
+                init.set_has_changes(false);
+                init.set_is_missing(false);
                 init.set_is_keyword(is_keyword);
                 init.set_padding_rows(padding.extent.row as u8);
                 init.set_lookahead_bytes(lookahead_bytes as u8);
@@ -358,11 +358,11 @@ pub(crate) unsafe extern "C" fn ts_subtree_new_leaf(
             init.set_visible(metadata.visible());
             init.set_named(metadata.named());
             init.set_extra(extra);
-            init.set_fragile_left(0 as os::raw::c_int != 0);
-            init.set_fragile_right(0 as os::raw::c_int != 0);
-            init.set_has_changes(0 as os::raw::c_int != 0);
+            init.set_fragile_left(false);
+            init.set_fragile_right(false);
+            init.set_has_changes(false);
             init.set_has_external_tokens(has_external_tokens);
-            init.set_is_missing(0 as os::raw::c_int != 0);
+            init.set_is_missing(false);
             init.set_is_keyword(is_keyword);
             init
         };
@@ -404,13 +404,13 @@ pub(crate) unsafe extern "C" fn ts_subtree_new_error(
         size,
         bytes_scanned,
         parse_state,
-        0 as os::raw::c_int != 0,
-        0 as os::raw::c_int != 0,
+        false,
+        false,
         language,
     );
     let mut data: *mut SubtreeHeapData = result.ptr as *mut SubtreeHeapData;
-    (*data).set_fragile_left(1 as os::raw::c_int != 0);
-    (*data).set_fragile_right(1 as os::raw::c_int != 0);
+    (*data).set_fragile_left(true);
+    (*data).set_fragile_right(true);
     (*data).c2rust_unnamed.lookahead_char = lookahead_char;
     result
 }
@@ -672,7 +672,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_set_children(
     (*self_0.ptr).error_cost = 0 as os::raw::c_int as u32;
     (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.repeat_depth = 0 as os::raw::c_int as u32;
     (*self_0.ptr).c2rust_unnamed.c2rust_unnamed.node_count = 1 as os::raw::c_int as u32;
-    (*self_0.ptr).set_has_external_tokens(0 as os::raw::c_int != 0);
+    (*self_0.ptr).set_has_external_tokens(false);
     (*self_0.ptr)
         .c2rust_unnamed
         .c2rust_unnamed
@@ -790,10 +790,10 @@ pub(crate) unsafe extern "C" fn ts_subtree_set_children(
                 as u32 as u32
         }
         if ts_subtree_has_external_tokens(child) {
-            (*self_0.ptr).set_has_external_tokens(1 as os::raw::c_int != 0)
+            (*self_0.ptr).set_has_external_tokens(true)
         }
         if ts_subtree_is_error(child) {
-            (*self_0.ptr).set_fragile_right(1 as os::raw::c_int != 0);
+            (*self_0.ptr).set_fragile_right(true);
             (*self_0.ptr).set_fragile_left((*self_0.ptr).fragile_right());
             (*self_0.ptr).parse_state = TS_TREE_STATE_NONE
         }
@@ -873,10 +873,10 @@ pub(crate) unsafe extern "C" fn ts_subtree_set_children(
             .first_leaf
             .parse_state = ts_subtree_leaf_parse_state(first_child);
         if ts_subtree_fragile_left(first_child) {
-            (*self_0.ptr).set_fragile_left(1 as os::raw::c_int != 0)
+            (*self_0.ptr).set_fragile_left(true)
         }
         if ts_subtree_fragile_right(last_child) {
-            (*self_0.ptr).set_fragile_right(1 as os::raw::c_int != 0)
+            (*self_0.ptr).set_fragile_right(true)
         }
         if (*self_0.ptr).child_count >= 2 as os::raw::c_int as os::raw::c_uint
             && !(*self_0.ptr).visible()
@@ -948,10 +948,10 @@ pub(crate) unsafe extern "C" fn ts_subtree_new_node(
         init.set_extra(false);
         init.set_fragile_left(fragile);
         init.set_fragile_right(fragile);
-        init.set_has_changes(0 as os::raw::c_int != 0);
+        init.set_has_changes(false);
         init.set_has_external_tokens(false);
         init.set_is_missing(false);
-        init.set_is_keyword(0 as os::raw::c_int != 0);
+        init.set_is_keyword(false);
         init
     };
     let mut result: MutableSubtree = MutableSubtree { ptr: data };
@@ -989,15 +989,15 @@ pub(crate) unsafe extern "C" fn ts_subtree_new_missing_leaf(
         length_zero(),
         0 as os::raw::c_int as u32,
         0 as os::raw::c_int as TSStateId,
-        0 as os::raw::c_int != 0,
-        0 as os::raw::c_int != 0,
+        false,
+        false,
         language,
     );
     if result.data.is_inline() {
-        result.data.set_is_missing(1 as os::raw::c_int != 0)
+        result.data.set_is_missing(true)
     } else {
         let fresh9 = &mut *(result.ptr as *mut SubtreeHeapData);
-        (*fresh9).set_is_missing(1 as os::raw::c_int != 0)
+        (*fresh9).set_is_missing(true)
     }
     result
 }
@@ -1088,25 +1088,25 @@ pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Su
     }
     if !self_0.ptr.is_null() {
         if other.ptr.is_null() {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
     } else {
         return other.ptr.is_null();
     }
     if (*self_0.ptr).symbol as os::raw::c_int != (*other.ptr).symbol as os::raw::c_int {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).visible() as os::raw::c_int != (*other.ptr).visible() as os::raw::c_int {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).named() as os::raw::c_int != (*other.ptr).named() as os::raw::c_int {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).padding.bytes != (*other.ptr).padding.bytes {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).size.bytes != (*other.ptr).size.bytes {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).symbol as os::raw::c_int
         == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int
@@ -1115,7 +1115,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Su
             == (*other.ptr).c2rust_unnamed.lookahead_char;
     }
     if (*self_0.ptr).child_count != (*other.ptr).child_count {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     if (*self_0.ptr).child_count > 0 as os::raw::c_int as os::raw::c_uint {
         if (*self_0.ptr)
@@ -1127,7 +1127,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Su
                 .c2rust_unnamed
                 .visible_child_count
         {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
         if (*self_0.ptr)
             .c2rust_unnamed
@@ -1135,7 +1135,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Su
             .named_child_count
             != (*other.ptr).c2rust_unnamed.c2rust_unnamed.named_child_count
         {
-            return 0 as os::raw::c_int != 0;
+            return false;
         }
         let mut i: u32 = 0 as os::raw::c_int as u32;
         while i < (*self_0.ptr).child_count {
@@ -1151,7 +1151,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Su
                     .children
                     .offset(i as isize),
             ) {
-                return 0 as os::raw::c_int != 0;
+                return false;
             }
             i = i.wrapping_add(1)
         }
@@ -1200,9 +1200,9 @@ pub(crate) unsafe extern "C" fn ts_subtree_compare(
 #[inline]
 unsafe extern "C" fn ts_subtree_set_has_changes(mut self_0: *mut MutableSubtree) {
     if (*self_0).data.is_inline() {
-        (*self_0).data.set_has_changes(1 as os::raw::c_int != 0)
+        (*self_0).data.set_has_changes(true)
     } else {
-        (*(*self_0).ptr).set_has_changes(1 as os::raw::c_int != 0)
+        (*(*self_0).ptr).set_has_changes(true)
     };
 }
 #[no_mangle]
@@ -1322,10 +1322,10 @@ pub(crate) unsafe extern "C" fn ts_subtree_edit(
                 (*data).set_visible(result.data.visible());
                 (*data).set_named(result.data.named());
                 (*data).set_extra(result.data.extra());
-                (*data).set_fragile_left(0 as os::raw::c_int != 0);
-                (*data).set_fragile_right(0 as os::raw::c_int != 0);
-                (*data).set_has_changes(0 as os::raw::c_int != 0);
-                (*data).set_has_external_tokens(0 as os::raw::c_int != 0);
+                (*data).set_fragile_left(false);
+                (*data).set_fragile_right(false);
+                (*data).set_has_changes(false);
+                (*data).set_has_external_tokens(false);
                 (*data).set_is_missing(result.data.is_missing());
                 (*data).set_is_keyword(result.data.is_keyword());
                 result.ptr = data
@@ -1620,7 +1620,7 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                     language,
                     include_all,
                     0 as os::raw::c_int as TSSymbol,
-                    0 as os::raw::c_int != 0,
+                    false,
                     ptr::null(),
                 ))
             } else {
@@ -1686,7 +1686,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_string(
         language,
         include_all,
         0 as os::raw::c_int as TSSymbol,
-        0 as os::raw::c_int != 0,
+        false,
         ROOT_FIELD,
     )
     .wrapping_add(1);
@@ -1704,7 +1704,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_string(
         language,
         include_all,
         0 as os::raw::c_int as TSSymbol,
-        0 as os::raw::c_int != 0,
+        false,
         ROOT_FIELD,
     );
     result

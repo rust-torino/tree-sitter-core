@@ -56,7 +56,7 @@ pub(crate) unsafe extern "C" fn ts_range_array_intersects(
             if (*range).start_byte >= end_byte {
                 break;
             }
-            return 1 as os::raw::c_int != 0;
+            return true;
         } else {
             i = i.wrapping_add(1)
         }
@@ -74,8 +74,8 @@ pub(crate) unsafe extern "C" fn ts_range_array_get_changed_ranges(
     let mut new_index: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     let mut old_index: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     let mut current_position: Length = length_zero();
-    let mut in_old_range: bool = 0 as os::raw::c_int != 0;
-    let mut in_new_range: bool = 0 as os::raw::c_int != 0;
+    let mut in_old_range: bool = false;
+    let mut in_new_range: bool = false;
     while old_index < old_range_count || new_index < new_range_count {
         let mut old_range: *const TSRange =
             &*old_ranges.offset(old_index as isize) as *const TSRange;
@@ -177,7 +177,7 @@ unsafe extern "C" fn iterator_new(
         cursor: *cursor,
         language,
         visible_depth: 1 as os::raw::c_int as os::raw::c_uint,
-        in_padding: 0 as os::raw::c_int != 0,
+        in_padding: false,
     }
 }
 unsafe extern "C" fn iterator_done(mut self_0: *mut Iterator_0) -> bool {
@@ -242,7 +242,7 @@ unsafe extern "C" fn iterator_tree_is_visible(mut self_0: *const Iterator_0) -> 
         .offset((*self_0).cursor.stack.size.wrapping_sub(1) as isize)
         as *mut TreeCursorEntry);
     if ts_subtree_visible(*entry.subtree) {
-        return 1 as os::raw::c_int != 0;
+        return true;
     }
     if (*self_0).cursor.stack.size > 1 as os::raw::c_int as os::raw::c_uint {
         let mut parent: Subtree = *(*(*self_0)
@@ -326,17 +326,17 @@ unsafe extern "C" fn iterator_ascend(mut self_0: *mut Iterator_0) {
         .child_index
         > 0 as os::raw::c_int as os::raw::c_uint
     {
-        (*self_0).in_padding = 0 as os::raw::c_int != 0
+        (*self_0).in_padding = false
     }
     (*self_0).cursor.stack.size = (*self_0).cursor.stack.size.wrapping_sub(1);
 }
 unsafe extern "C" fn iterator_descend(mut self_0: *mut Iterator_0, mut goal_position: u32) -> bool {
     if (*self_0).in_padding {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     let mut did_descend: bool = false;
     loop {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         assert!(
             (*self_0)
                 .cursor
@@ -379,13 +379,13 @@ unsafe extern "C" fn iterator_descend(mut self_0: *mut Iterator_0, mut goal_posi
                 };
                 if iterator_tree_is_visible(self_0) {
                     if child_left.bytes > goal_position {
-                        (*self_0).in_padding = 1 as os::raw::c_int != 0
+                        (*self_0).in_padding = true
                     } else {
                         (*self_0).visible_depth = (*self_0).visible_depth.wrapping_add(1)
                     }
-                    return 1 as os::raw::c_int != 0;
+                    return true;
                 }
-                did_descend = 1 as os::raw::c_int != 0;
+                did_descend = true;
                 break;
             } else {
                 position = child_right;
@@ -403,7 +403,7 @@ unsafe extern "C" fn iterator_descend(mut self_0: *mut Iterator_0, mut goal_posi
 }
 unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
     if (*self_0).in_padding {
-        (*self_0).in_padding = 0 as os::raw::c_int != 0;
+        (*self_0).in_padding = false;
         if iterator_tree_is_visible(self_0) {
             (*self_0).visible_depth = (*self_0).visible_depth.wrapping_add(1)
         } else {
@@ -470,7 +470,7 @@ unsafe extern "C" fn iterator_advance(mut self_0: *mut Iterator_0) {
         };
         if iterator_tree_is_visible(self_0) {
             if ts_subtree_padding(*next_child).bytes > 0 as os::raw::c_int as os::raw::c_uint {
-                (*self_0).in_padding = 1 as os::raw::c_int != 0
+                (*self_0).in_padding = true
             } else {
                 (*self_0).visible_depth = (*self_0).visible_depth.wrapping_add(1)
             }
@@ -586,7 +586,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_get_changed_ranges(
         {
             comparison = IteratorMayDiffer
         }
-        let mut is_changed: bool = 0 as os::raw::c_int != 0;
+        let mut is_changed: bool = false;
         match comparison as os::raw::c_uint {
             2 => {
                 // If the subtrees are definitely identical, move to the end
@@ -598,11 +598,11 @@ pub(crate) unsafe extern "C" fn ts_subtree_get_changed_ranges(
                 // subtrees, finding the first child that spans the current position.
                 if iterator_descend(&mut old_iter, position.bytes) {
                     if !iterator_descend(&mut new_iter, position.bytes) {
-                        is_changed = 1 as os::raw::c_int != 0;
+                        is_changed = true;
                         next_position = iterator_end_position(&mut old_iter)
                     }
                 } else if iterator_descend(&mut new_iter, position.bytes) {
-                    is_changed = 1 as os::raw::c_int != 0;
+                    is_changed = true;
                     next_position = iterator_end_position(&mut new_iter)
                 } else {
                     next_position = length_min(
@@ -614,7 +614,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_get_changed_ranges(
             0 => {
                 // If the subtrees are different, record a change and then move
                 // to the end of both subtrees.
-                is_changed = 1 as os::raw::c_int != 0;
+                is_changed = true;
                 next_position = length_min(
                     iterator_end_position(&mut old_iter),
                     iterator_end_position(&mut new_iter),

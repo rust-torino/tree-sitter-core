@@ -945,7 +945,7 @@ pub(crate) unsafe extern "C" fn length_sub(mut len1: Length, mut len2: Length) -
 #[inline]
 pub(crate) unsafe extern "C" fn ts_subtree_has_external_tokens(mut self_0: Subtree) -> bool {
     if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int != 0
+        false
     } else {
         (*self_0.ptr).has_external_tokens() as os::raw::c_int != 0
     }
@@ -962,7 +962,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_repeat_depth(mut self_0: Subtree) -> 
 
 pub(crate) unsafe extern "C" fn ts_subtree_fragile_right(mut self_0: Subtree) -> bool {
     if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int != 0
+        false
     } else {
         (*self_0.ptr).fragile_right() as os::raw::c_int != 0
     }
@@ -970,7 +970,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_fragile_right(mut self_0: Subtree) ->
 #[inline]
 pub(crate) unsafe extern "C" fn ts_subtree_fragile_left(mut self_0: Subtree) -> bool {
     if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int != 0
+        false
     } else {
         (*self_0.ptr).fragile_left() as os::raw::c_int != 0
     }
@@ -1096,7 +1096,7 @@ pub(crate) unsafe extern "C" fn array__erase(
 
 #[inline]
 pub(crate) unsafe extern "C" fn ts_toggle_allocation_recording(mut _value: bool) -> bool {
-    0 as os::raw::c_int != 0
+    false
 }
 
 // Query
@@ -1203,9 +1203,9 @@ pub(crate) unsafe extern "C" fn ts_subtree_is_keyword(mut self_0: Subtree) -> bo
 #[inline]
 pub(crate) unsafe extern "C" fn ts_subtree_set_extra(mut self_0: *mut MutableSubtree) {
     if (*self_0).data.is_inline() {
-        (*self_0).data.set_extra(1 as os::raw::c_int != 0)
+        (*self_0).data.set_extra(true)
     } else {
-        (*(*self_0).ptr).set_extra(1 as os::raw::c_int != 0)
+        (*(*self_0).ptr).set_extra(true)
     }
 }
 
@@ -1216,7 +1216,7 @@ pub(crate) unsafe extern "C" fn ts_subtree_is_eof(mut self_0: Subtree) -> bool {
 #[inline]
 pub(crate) unsafe extern "C" fn ts_subtree_is_fragile(mut self_0: Subtree) -> bool {
     if self_0.data.is_inline() as os::raw::c_int != 0 {
-        0 as os::raw::c_int != 0
+        false
     } else {
         ((*self_0.ptr).fragile_left() as os::raw::c_int != 0
             || (*self_0.ptr).fragile_right() as os::raw::c_int != 0) as os::raw::c_int

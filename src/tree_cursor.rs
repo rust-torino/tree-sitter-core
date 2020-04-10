@@ -82,7 +82,7 @@ unsafe extern "C" fn ts_tree_cursor_child_iterator_next(
     if (*self_0).parent.ptr.is_null()
         || (*self_0).child_index == (*(*self_0).parent.ptr).child_count
     {
-        return 0 as os::raw::c_int != 0;
+        return false;
     }
     let mut child: *const Subtree = &mut *(*(*self_0).parent.ptr)
         .c2rust_unnamed
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeC
     let mut self_0: *mut TreeCursor = _self as *mut TreeCursor;
     let mut did_descend: bool = false;
     loop {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut visible: bool = false;
         let mut entry: TreeCursorEntry = TreeCursorEntry {
             subtree: std::ptr::null::<Subtree>(),
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeC
                 let fresh1 = (*self_0).stack.size;
                 (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
                 *(*self_0).stack.contents.offset(fresh1 as isize) = entry;
-                return 1 as os::raw::c_int != 0;
+                return true;
             }
             if ts_subtree_visible_child_count(*entry.subtree)
                 <= 0 as os::raw::c_int as os::raw::c_uint
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeC
             let fresh2 = (*self_0).stack.size;
             (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
             *(*self_0).stack.contents.offset(fresh2 as isize) = entry;
-            did_descend = 1 as os::raw::c_int != 0;
+            did_descend = true;
             break;
         }
         if !did_descend {
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child_for_byte(
     let mut visible_child_index: u32 = 0 as os::raw::c_int as u32;
     let mut did_descend: bool = false;
     loop {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut visible: bool = false;
         let mut entry: TreeCursorEntry = TreeCursorEntry {
             subtree: std::ptr::null::<Subtree>(),
@@ -262,7 +262,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child_for_byte(
                 let fresh4 = (*self_0).stack.size;
                 (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
                 *(*self_0).stack.contents.offset(fresh4 as isize) = entry;
-                did_descend = 1 as os::raw::c_int != 0;
+                did_descend = true;
                 break;
             } else if visible {
                 visible_child_index = visible_child_index.wrapping_add(1)
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_next_sibling(mut _self: *mut TSTree
         iterator.child_index = entry.child_index;
         iterator.structural_child_index = entry.structural_child_index;
         iterator.position = entry.position;
-        let mut visible: bool = 0 as os::raw::c_int != 0;
+        let mut visible: bool = false;
         ts_tree_cursor_child_iterator_next(&mut iterator, &mut entry, &mut visible);
         if visible as os::raw::c_int != 0 && (*self_0).stack.size.wrapping_add(1) < initial_size {
             break;
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_next_sibling(mut _self: *mut TSTree
                 let fresh5 = (*self_0).stack.size;
                 (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
                 *(*self_0).stack.contents.offset(fresh5 as isize) = entry;
-                return 1 as os::raw::c_int != 0;
+                return true;
             }
             if ts_subtree_visible_child_count(*entry.subtree) != 0 {
                 array__grow(
@@ -325,7 +325,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_next_sibling(mut _self: *mut TSTree
                 (*self_0).stack.size = (*self_0).stack.size.wrapping_add(1);
                 *(*self_0).stack.contents.offset(fresh6 as isize) = entry;
                 ts_tree_cursor_goto_first_child(_self);
-                return 1 as os::raw::c_int != 0;
+                return true;
             }
         }
     }
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
     while i.wrapping_add(1) > 0 as os::raw::c_int as os::raw::c_uint {
         let mut entry: *mut TreeCursorEntry =
             &mut *(*self_0).stack.contents.offset(i as isize) as *mut TreeCursorEntry;
-        let mut is_aliased: bool = 0 as os::raw::c_int != 0;
+        let mut is_aliased: bool = false;
         if i > 0 as os::raw::c_int as os::raw::c_uint {
             let mut parent_entry: *mut TreeCursorEntry =
                 &mut *(*self_0).stack.contents.offset(i.wrapping_sub(1) as isize)
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
             || is_aliased as os::raw::c_int != 0
         {
             (*self_0).stack.size = i.wrapping_add(1);
-            return 1 as os::raw::c_int != 0;
+            return true;
         }
         i = i.wrapping_sub(1)
     }
@@ -414,8 +414,8 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_current_status(
 ) -> TSFieldId {
     let mut self_0: *const TreeCursor = _self as *const TreeCursor;
     let mut result: TSFieldId = 0 as os::raw::c_int as TSFieldId;
-    *can_have_later_siblings = 0 as os::raw::c_int != 0;
-    *can_have_later_siblings_with_this_field = 0 as os::raw::c_int != 0;
+    *can_have_later_siblings = false;
+    *can_have_later_siblings_with_this_field = false;
     // Walk up the tree, visiting the current node and its invisible ancestors,
     // because fields can refer to nodes through invisible *wrapper* nodes,
     let mut i: os::raw::c_uint = (*self_0).stack.size.wrapping_sub(1);
@@ -446,7 +446,7 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_current_status(
             }
         }
         if ts_subtree_child_count(*(*parent_entry).subtree) > (*entry).child_index.wrapping_add(1) {
-            *can_have_later_siblings = 1 as os::raw::c_int != 0
+            *can_have_later_siblings = true
         }
         if ts_subtree_extra(*(*entry).subtree) {
             break;
@@ -470,7 +470,7 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_current_status(
                     && (*i_0).child_index as os::raw::c_uint == (*entry).structural_child_index
                 {
                     result = (*i_0).field_id;
-                    *can_have_later_siblings_with_this_field = 0 as os::raw::c_int != 0;
+                    *can_have_later_siblings_with_this_field = false;
                     break;
                 } else {
                     i_0 = i_0.offset(1)
@@ -484,7 +484,7 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_current_status(
                 if (*i_1).field_id as os::raw::c_int == result as os::raw::c_int
                     && (*i_1).child_index as os::raw::c_uint > (*entry).structural_child_index
                 {
-                    *can_have_later_siblings_with_this_field = 1 as os::raw::c_int != 0;
+                    *can_have_later_siblings_with_this_field = true;
                     break;
                 } else {
                     i_1 = i_1.offset(1)

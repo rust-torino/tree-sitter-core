@@ -171,9 +171,9 @@ unsafe extern "C" fn ts_node__child(
     mut include_anonymous: bool,
 ) -> TSNode {
     let mut result: TSNode = self_0;
-    let mut did_descend: bool = 1 as os::raw::c_int != 0;
+    let mut did_descend: bool = true;
     while did_descend {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -195,7 +195,7 @@ unsafe extern "C" fn ts_node__child(
                 let mut grandchild_count: u32 =
                     ts_node__relevant_child_count(child, include_anonymous);
                 if grandchild_index < grandchild_count {
-                    did_descend = 1 as os::raw::c_int != 0;
+                    did_descend = true;
                     result = child;
                     child_index = grandchild_index;
                     break;
@@ -241,11 +241,11 @@ unsafe extern "C" fn ts_node__prev_sibling(
     let mut target_end_byte: u32 = ts_node_end_byte(self_0);
     let mut node: TSNode = ts_node_parent(self_0);
     let mut earlier_node: TSNode = ts_node__null();
-    let mut earlier_node_is_relevant: bool = 0 as os::raw::c_int != 0;
+    let mut earlier_node_is_relevant: bool = false;
     while !ts_node_is_null(node) {
         let mut earlier_child: TSNode = ts_node__null();
-        let mut earlier_child_is_relevant: bool = 0 as os::raw::c_int != 0;
-        let mut found_child_containing_target: bool = 0 as os::raw::c_int != 0;
+        let mut earlier_child_is_relevant: bool = false;
+        let mut found_child_containing_target: bool = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -265,16 +265,16 @@ unsafe extern "C" fn ts_node__prev_sibling(
                         ) as os::raw::c_int
                             != 0))
             {
-                found_child_containing_target = 1 as os::raw::c_int != 0;
+                found_child_containing_target = true;
                 break;
             } else if ts_node__is_relevant(child, include_anonymous) {
                 earlier_child = child;
-                earlier_child_is_relevant = 1 as os::raw::c_int != 0
+                earlier_child_is_relevant = true
             } else if ts_node__relevant_child_count(child, include_anonymous)
                 > 0 as os::raw::c_int as os::raw::c_uint
             {
                 earlier_child = child;
-                earlier_child_is_relevant = 0 as os::raw::c_int != 0
+                earlier_child_is_relevant = false
             }
         }
         if found_child_containing_target {
@@ -303,10 +303,10 @@ unsafe extern "C" fn ts_node__next_sibling(
     let mut target_end_byte: u32 = ts_node_end_byte(self_0);
     let mut node: TSNode = ts_node_parent(self_0);
     let mut later_node: TSNode = ts_node__null();
-    let mut later_node_is_relevant: bool = 0 as os::raw::c_int != 0;
+    let mut later_node_is_relevant: bool = false;
     while !ts_node_is_null(node) {
         let mut later_child: TSNode = ts_node__null();
-        let mut later_child_is_relevant: bool = 0 as os::raw::c_int != 0;
+        let mut later_child_is_relevant: bool = false;
         let mut child_containing_target: TSNode = ts_node__null();
         let mut child: TSNode = TSNode {
             context: [0; 4],
@@ -324,7 +324,7 @@ unsafe extern "C" fn ts_node__next_sibling(
                 }
             } else if ts_node__is_relevant(child, include_anonymous) {
                 later_child = child;
-                later_child_is_relevant = 1 as os::raw::c_int != 0;
+                later_child_is_relevant = true;
                 break;
             } else {
                 if ts_node__relevant_child_count(child, include_anonymous)
@@ -333,7 +333,7 @@ unsafe extern "C" fn ts_node__next_sibling(
                     continue;
                 }
                 later_child = child;
-                later_child_is_relevant = 0 as os::raw::c_int != 0;
+                later_child_is_relevant = false;
                 break;
             }
         }
@@ -362,9 +362,9 @@ unsafe extern "C" fn ts_node__first_child_for_byte(
     mut include_anonymous: bool,
 ) -> TSNode {
     let mut node: TSNode = self_0;
-    let mut did_descend: bool = 1 as os::raw::c_int != 0;
+    let mut did_descend: bool = true;
     while did_descend {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -381,7 +381,7 @@ unsafe extern "C" fn ts_node__first_child_for_byte(
                 if ts_node_child_count(child) <= 0 as os::raw::c_int as os::raw::c_uint {
                     continue;
                 }
-                did_descend = 1 as os::raw::c_int != 0;
+                did_descend = true;
                 node = child;
                 break;
             }
@@ -398,9 +398,9 @@ unsafe extern "C" fn ts_node__descendant_for_byte_range(
 ) -> TSNode {
     let mut node: TSNode = self_0;
     let mut last_visible_node: TSNode = self_0;
-    let mut did_descend: bool = 1 as os::raw::c_int != 0;
+    let mut did_descend: bool = true;
     while did_descend {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -427,7 +427,7 @@ unsafe extern "C" fn ts_node__descendant_for_byte_range(
                 ts_tree_set_cached_parent(self_0.tree, &child, &last_visible_node);
                 last_visible_node = node
             }
-            did_descend = 1 as os::raw::c_int != 0;
+            did_descend = true;
             break;
         }
     }
@@ -442,9 +442,9 @@ unsafe extern "C" fn ts_node__descendant_for_point_range(
 ) -> TSNode {
     let mut node: TSNode = self_0;
     let mut last_visible_node: TSNode = self_0;
-    let mut did_descend: bool = 1 as os::raw::c_int != 0;
+    let mut did_descend: bool = true;
     while did_descend {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -471,7 +471,7 @@ unsafe extern "C" fn ts_node__descendant_for_point_range(
                 ts_tree_set_cached_parent(self_0.tree, &child, &last_visible_node);
                 last_visible_node = node
             }
-            did_descend = 1 as os::raw::c_int != 0;
+            did_descend = true;
             break;
         }
     }
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn ts_node_string(mut self_0: TSNode) -> *mut os::raw::c_c
     ts_subtree_string(
         ts_node__subtree(self_0),
         (*self_0.tree).language,
-        0 as os::raw::c_int != 0,
+        false,
     )
 }
 /* *
@@ -561,9 +561,9 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
         return ts_node__null();
     }
     let mut last_visible_node: TSNode = node;
-    let mut did_descend: bool = 1 as os::raw::c_int != 0;
+    let mut did_descend: bool = true;
     while did_descend {
-        did_descend = 0 as os::raw::c_int != 0;
+        did_descend = false;
         let mut child: TSNode = TSNode {
             context: [0; 4],
             id: ptr::null(),
@@ -578,11 +578,11 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
                 continue;
             }
             node = child;
-            if ts_node__is_relevant(child, 1 as os::raw::c_int != 0) {
+            if ts_node__is_relevant(child, true) {
                 ts_tree_set_cached_parent(self_0.tree, &node, &last_visible_node);
                 last_visible_node = node
             }
-            did_descend = 1 as os::raw::c_int != 0;
+            did_descend = true;
             break;
         }
     }
@@ -590,11 +590,11 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child(mut self_0: TSNode, mut child_index: u32) -> TSNode {
-    ts_node__child(self_0, child_index, 1 as os::raw::c_int != 0)
+    ts_node__child(self_0, child_index, true)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_child(mut self_0: TSNode, mut child_index: u32) -> TSNode {
-    ts_node__child(self_0, child_index, 0 as os::raw::c_int != 0)
+    ts_node__child(self_0, child_index, false)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child_by_field_id(
@@ -668,7 +668,7 @@ pub unsafe extern "C" fn ts_node_child_by_field_id(
                         return ts_node__null();
                     }
                 }
-            } else if ts_node__is_relevant(child, 1 as os::raw::c_int != 0) {
+            } else if ts_node__is_relevant(child, true) {
                 return child;
             } else {
                 // If the field refers to a hidden node, return its first visible
@@ -712,33 +712,33 @@ pub unsafe extern "C" fn ts_node_named_child_count(mut self_0: TSNode) -> u32 {
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_next_sibling(mut self_0: TSNode) -> TSNode {
-    ts_node__next_sibling(self_0, 1 as os::raw::c_int != 0)
+    ts_node__next_sibling(self_0, true)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_next_named_sibling(mut self_0: TSNode) -> TSNode {
-    ts_node__next_sibling(self_0, 0 as os::raw::c_int != 0)
+    ts_node__next_sibling(self_0, false)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_prev_sibling(mut self_0: TSNode) -> TSNode {
-    ts_node__prev_sibling(self_0, 1 as os::raw::c_int != 0)
+    ts_node__prev_sibling(self_0, true)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_prev_named_sibling(mut self_0: TSNode) -> TSNode {
-    ts_node__prev_sibling(self_0, 0 as os::raw::c_int != 0)
+    ts_node__prev_sibling(self_0, false)
 }
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_node_first_child_for_byte(
     mut self_0: TSNode,
     mut byte: u32,
 ) -> TSNode {
-    ts_node__first_child_for_byte(self_0, byte, 1 as os::raw::c_int != 0)
+    ts_node__first_child_for_byte(self_0, byte, true)
 }
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_node_first_named_child_for_byte(
     mut self_0: TSNode,
     mut byte: u32,
 ) -> TSNode {
-    ts_node__first_child_for_byte(self_0, byte, 0 as os::raw::c_int != 0)
+    ts_node__first_child_for_byte(self_0, byte, false)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_descendant_for_byte_range(
@@ -746,7 +746,7 @@ pub unsafe extern "C" fn ts_node_descendant_for_byte_range(
     mut start: u32,
     mut end: u32,
 ) -> TSNode {
-    ts_node__descendant_for_byte_range(self_0, start, end, 1 as os::raw::c_int != 0)
+    ts_node__descendant_for_byte_range(self_0, start, end, true)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_descendant_for_byte_range(
@@ -754,7 +754,7 @@ pub unsafe extern "C" fn ts_node_named_descendant_for_byte_range(
     mut start: u32,
     mut end: u32,
 ) -> TSNode {
-    ts_node__descendant_for_byte_range(self_0, start, end, 0 as os::raw::c_int != 0)
+    ts_node__descendant_for_byte_range(self_0, start, end, false)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_descendant_for_point_range(
@@ -762,7 +762,7 @@ pub unsafe extern "C" fn ts_node_descendant_for_point_range(
     mut start: TSPoint,
     mut end: TSPoint,
 ) -> TSNode {
-    ts_node__descendant_for_point_range(self_0, start, end, 1 as os::raw::c_int != 0)
+    ts_node__descendant_for_point_range(self_0, start, end, true)
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_descendant_for_point_range(
@@ -770,7 +770,7 @@ pub unsafe extern "C" fn ts_node_named_descendant_for_point_range(
     mut start: TSPoint,
     mut end: TSPoint,
 ) -> TSNode {
-    ts_node__descendant_for_point_range(self_0, start, end, 0 as os::raw::c_int != 0)
+    ts_node__descendant_for_point_range(self_0, start, end, false)
 }
 
 #[no_mangle]

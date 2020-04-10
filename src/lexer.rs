@@ -231,7 +231,7 @@ unsafe extern "C" fn ts_lexer__get_column(mut _self: *mut TSLexer) -> u32 {
     }
     let mut result: u32 = 0 as os::raw::c_int as u32;
     while (*self_0).current_position.bytes < goal_byte {
-        ts_lexer__advance(&mut (*self_0).data, 0 as os::raw::c_int != 0);
+        ts_lexer__advance(&mut (*self_0).data, false);
         result = result.wrapping_add(1)
     }
     result
@@ -313,7 +313,7 @@ pub(crate) unsafe extern "C" fn ts_lexer_delete(mut self_0: *mut Lexer) {
 }
 unsafe extern "C" fn ts_lexer_goto(mut self_0: *mut Lexer, mut position: Length) {
     (*self_0).current_position = position;
-    let mut found_included_range: bool = 0 as os::raw::c_int != 0;
+    let mut found_included_range: bool = false;
     // Move to the first valid position at or after the given position.
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     while (i as usize) < (*self_0).included_range_count {
@@ -327,7 +327,7 @@ unsafe extern "C" fn ts_lexer_goto(mut self_0: *mut Lexer, mut position: Length)
                 }
             }
             (*self_0).current_included_range_index = i as usize;
-            found_included_range = 1 as os::raw::c_int != 0;
+            found_included_range = true;
             break;
         } else {
             i = i.wrapping_add(1)
@@ -390,7 +390,7 @@ pub(crate) unsafe extern "C" fn ts_lexer_start(mut self_0: *mut Lexer) {
         if (*self_0).current_position.bytes == 0 as os::raw::c_int as os::raw::c_uint
             && (*self_0).data.lookahead == BYTE_ORDER_MARK
         {
-            ts_lexer__advance(&mut (*self_0).data, 1 as os::raw::c_int != 0);
+            ts_lexer__advance(&mut (*self_0).data, true);
         }
     };
 }
@@ -417,7 +417,7 @@ pub(crate) unsafe extern "C" fn ts_lexer_finish(
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_lexer_advance_to_end(mut self_0: *mut Lexer) {
     while !(*self_0).chunk.is_null() {
-        ts_lexer__advance(&mut (*self_0).data, 0 as os::raw::c_int != 0);
+        ts_lexer__advance(&mut (*self_0).data, false);
     }
 }
 #[no_mangle]
@@ -439,7 +439,7 @@ pub(crate) unsafe extern "C" fn ts_lexer_set_included_ranges(
         while i < count {
             let mut range: *const TSRange = &*ranges.offset(i as isize) as *const TSRange;
             if (*range).start_byte < previous_byte || (*range).end_byte < (*range).start_byte {
-                return 0 as os::raw::c_int != 0;
+                return false;
             }
             previous_byte = (*range).end_byte;
             i = i.wrapping_add(1)

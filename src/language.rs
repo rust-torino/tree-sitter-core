@@ -37,7 +37,7 @@ pub(crate) unsafe extern "C" fn ts_language_table_entry(
             == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
     {
         (*result).action_count = 0 as os::raw::c_int as u32;
-        (*result).is_reusable = 0 as os::raw::c_int != 0;
+        (*result).is_reusable = false;
         (*result).actions = std::ptr::null::<TSParseAction>()
     } else {
         assert!((symbol as os::raw::c_uint) < (*self_0).token_count);
@@ -58,8 +58,8 @@ pub(crate) unsafe extern "C" fn ts_language_symbol_metadata(
         let mut init = TSSymbolMetadata {
             visible_named: [0; 1],
         };
-        init.set_visible(1 as os::raw::c_int != 0);
-        init.set_named(1 as os::raw::c_int != 0);
+        init.set_visible(true);
+        init.set_named(true);
         init
     } else if symbol as os::raw::c_int
         == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int
@@ -67,8 +67,8 @@ pub(crate) unsafe extern "C" fn ts_language_symbol_metadata(
         let mut init = TSSymbolMetadata {
             visible_named: [0; 1],
         };
-        init.set_visible(0 as os::raw::c_int != 0);
-        init.set_named(0 as os::raw::c_int != 0);
+        init.set_visible(false);
+        init.set_named(false);
         init
     } else {
         *(*self_0).symbol_metadata.offset(symbol as isize)
