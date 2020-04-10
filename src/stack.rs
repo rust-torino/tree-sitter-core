@@ -1402,8 +1402,7 @@ where
         ::std::mem::size_of::<StackIterator>(),
         32 as os::raw::c_int as u32,
     );
-    let mut was_recording_allocations: bool =
-        ts_toggle_allocation_recording(false);
+    let mut was_recording_allocations: bool = ts_toggle_allocation_recording(false);
     writeln!(f, "digraph stack {{",).unwrap();
     writeln!(f, "rankdir=\"RL\";",).unwrap();
     writeln!(f, "edge [arrowhead=none]",).unwrap();

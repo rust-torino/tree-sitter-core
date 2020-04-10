@@ -168,13 +168,7 @@ unsafe extern "C" fn ts_parser__breakdown_top_of_stack(
             let mut j_0: u32 = 1 as os::raw::c_int as u32;
             while j_0 < slice.subtrees.size {
                 let mut tree: Subtree = *slice.subtrees.contents.offset(j_0 as isize);
-                ts_stack_push(
-                    (*self_0).stack,
-                    slice.version,
-                    tree,
-                    false,
-                    state,
-                );
+                ts_stack_push((*self_0).stack, slice.version, tree, false, state);
                 j_0 = j_0.wrapping_add(1)
             }
             ts_subtree_release(&mut (*self_0).tree_pool, parent);
@@ -552,8 +546,7 @@ unsafe extern "C" fn ts_parser__lex(
                         .data
                         .advance
                         .expect("non-null function pointer")(
-                        &mut (*self_0).lexer.data,
-                        false,
+                        &mut (*self_0).lexer.data, false
                     );
                 }
             }
@@ -1687,26 +1680,14 @@ unsafe extern "C" fn ts_parser__recover_to_state(
                     true,
                     (*self_0).language,
                 );
-                ts_stack_push(
-                    (*self_0).stack,
-                    slice.version,
-                    error,
-                    false,
-                    goal_state,
-                );
+                ts_stack_push((*self_0).stack, slice.version, error, false, goal_state);
             } else {
                 array__delete(&mut slice.subtrees as *mut SubtreeArray as *mut VoidArray);
             }
             let mut j_0: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
             while j_0 < trailing_extras.size {
                 let mut tree: Subtree = *trailing_extras.contents.offset(j_0 as isize);
-                ts_stack_push(
-                    (*self_0).stack,
-                    slice.version,
-                    tree,
-                    false,
-                    goal_state,
-                );
+                ts_stack_push((*self_0).stack, slice.version, tree, false, goal_state);
                 j_0 = j_0.wrapping_add(1)
             }
             previous_version = slice.version;
@@ -1782,12 +1763,7 @@ unsafe extern "C" fn ts_parser__recover(
                                 .wrapping_sub(entry.position.extent.row)
                                 .wrapping_mul(30),
                         );
-                    if ts_parser__better_version_exists(
-                        self_0,
-                        version,
-                        false,
-                        new_cost,
-                    ) {
+                    if ts_parser__better_version_exists(self_0, version, false, new_cost) {
                         break;
                     }
                     // If the current lookahead token is valid in some previous state, recover to that state.

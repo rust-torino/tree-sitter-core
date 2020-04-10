@@ -948,12 +948,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
                 stream_scan_identifier(stream);
                 let mut length: u32 =
                     (*stream).input.wrapping_offset_from_(node_name) as os::raw::c_long as u32;
-                symbol = ts_language_symbol_for_name(
-                    (*self_0).language,
-                    node_name,
-                    length,
-                    true,
-                );
+                symbol = ts_language_symbol_for_name((*self_0).language, node_name, length, true);
                 if symbol == 0 {
                     stream_reset(stream, node_name);
                     return TSQueryErrorNodeType;
@@ -1024,12 +1019,8 @@ unsafe extern "C" fn ts_query__parse_pattern(
             let mut length_0: u32 =
                 (*stream).input.wrapping_offset_from_(string_content) as os::raw::c_long as u32;
             // Add a step for the node
-            let mut symbol_0: TSSymbol = ts_language_symbol_for_name(
-                (*self_0).language,
-                string_content,
-                length_0,
-                false,
-            );
+            let mut symbol_0: TSSymbol =
+                ts_language_symbol_for_name((*self_0).language, string_content, length_0, false);
             if symbol_0 == 0 {
                 stream_reset(stream, string_content);
                 return TSQueryErrorNodeType;

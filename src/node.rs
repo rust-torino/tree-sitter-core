@@ -507,11 +507,7 @@ pub unsafe extern "C" fn ts_node_type(mut self_0: TSNode) -> *const os::raw::c_c
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_string(mut self_0: TSNode) -> *mut os::raw::c_char {
-    ts_subtree_string(
-        ts_node__subtree(self_0),
-        (*self_0.tree).language,
-        false,
-    )
+    ts_subtree_string(ts_node__subtree(self_0), (*self_0.tree).language, false)
 }
 /* *
  * Check if two nodes are identical.
