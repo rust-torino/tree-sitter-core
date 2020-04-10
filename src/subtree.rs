@@ -10,7 +10,7 @@ use std::{
     io::Write,
     mem::{align_of, size_of},
     os,
-    ptr::copy_nonoverlapping,
+    ptr::{self, copy_nonoverlapping},
 };
 
 #[derive(Copy, Clone)]
@@ -21,44 +21,41 @@ pub struct Edit {
     pub new_end: Length,
 }
 
-static mut empty_state: ExternalScannerState = {
-    let mut init = ExternalScannerState {
-        c2rust_unnamed: ExternalScannerStateData {
-            short_data: [
-                0 as os::raw::c_int as os::raw::c_char,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
-        },
-        length: 0 as os::raw::c_int as u32,
-    };
-    init
+static mut empty_state: ExternalScannerState = ExternalScannerState {
+    c2rust_unnamed: ExternalScannerStateData {
+        short_data: [
+            0 as os::raw::c_int as os::raw::c_char,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+    },
+    length: 0 as os::raw::c_int as u32,
 };
 
 // ExternalScannerState
 #[no_mangle]
-pub unsafe extern "C" fn ts_external_scanner_state_init(
+pub(crate) unsafe extern "C" fn ts_external_scanner_state_init(
     mut self_0: *mut ExternalScannerState,
     mut data: *const os::raw::c_char,
     mut length: os::raw::c_uint,
@@ -78,7 +75,7 @@ pub unsafe extern "C" fn ts_external_scanner_state_init(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_external_scanner_state_copy(
+pub(crate) unsafe extern "C" fn ts_external_scanner_state_copy(
     mut self_0: *const ExternalScannerState,
 ) -> ExternalScannerState {
     let mut result: ExternalScannerState = *self_0;
@@ -93,10 +90,12 @@ pub unsafe extern "C" fn ts_external_scanner_state_copy(
             (*self_0).length as usize,
         );
     }
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_external_scanner_state_delete(mut self_0: *mut ExternalScannerState) {
+pub(crate) unsafe extern "C" fn ts_external_scanner_state_delete(
+    mut self_0: *mut ExternalScannerState,
+) {
     if (*self_0).length as os::raw::c_ulong
         > ::std::mem::size_of::<[os::raw::c_char; 24]>() as os::raw::c_ulong
     {
@@ -104,33 +103,33 @@ pub unsafe extern "C" fn ts_external_scanner_state_delete(mut self_0: *mut Exter
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_external_scanner_state_data(
+pub(crate) unsafe extern "C" fn ts_external_scanner_state_data(
     mut self_0: *const ExternalScannerState,
 ) -> *const os::raw::c_char {
     if (*self_0).length as os::raw::c_ulong
         > ::std::mem::size_of::<[os::raw::c_char; 24]>() as os::raw::c_ulong
     {
-        return (*self_0).c2rust_unnamed.long_data;
+        (*self_0).c2rust_unnamed.long_data
     } else {
-        return (*self_0).c2rust_unnamed.short_data.as_ptr();
-    };
+        (*self_0).c2rust_unnamed.short_data.as_ptr()
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_external_scanner_state_eq(
+pub(crate) unsafe extern "C" fn ts_external_scanner_state_eq(
     mut a: *const ExternalScannerState,
     mut b: *const ExternalScannerState,
 ) -> bool {
-    return a == b
+    a == b
         || (*a).length == (*b).length
             && std::slice::from_raw_parts(ts_external_scanner_state_data(a), (*a).length as usize)
                 == std::slice::from_raw_parts(
                     ts_external_scanner_state_data(b),
                     (*a).length as usize,
-                );
+                )
 }
 // SubtreeArray
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_array_copy(
+pub(crate) unsafe extern "C" fn ts_subtree_array_copy(
     mut self_0: SubtreeArray,
     mut dest: *mut SubtreeArray,
 ) {
@@ -149,7 +148,7 @@ pub unsafe extern "C" fn ts_subtree_array_copy(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_array_delete(
+pub(crate) unsafe extern "C" fn ts_subtree_array_delete(
     mut pool: *mut SubtreePool,
     mut self_0: *mut SubtreeArray,
 ) {
@@ -161,16 +160,13 @@ pub unsafe extern "C" fn ts_subtree_array_delete(
     array__delete(self_0 as *mut VoidArray);
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_array_remove_trailing_extras(
+pub(crate) unsafe extern "C" fn ts_subtree_array_remove_trailing_extras(
     mut self_0: *mut SubtreeArray,
 ) -> SubtreeArray {
-    let mut result: SubtreeArray = {
-        let mut init = SubtreeArray {
-            contents: std::ptr::null_mut::<Subtree>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    let mut result = SubtreeArray {
+        contents: std::ptr::null_mut::<Subtree>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     let mut i: u32 = (*self_0).size.wrapping_sub(1);
     while i.wrapping_add(1) > 0 as os::raw::c_int as os::raw::c_uint {
@@ -190,53 +186,44 @@ pub unsafe extern "C" fn ts_subtree_array_remove_trailing_extras(
     }
     (*self_0).size = i.wrapping_add(1);
     ts_subtree_array_reverse(&mut result);
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_array_reverse(mut self_0: *mut SubtreeArray) {
+pub(crate) unsafe extern "C" fn ts_subtree_array_reverse(mut self_0: *mut SubtreeArray) {
     let mut i: u32 = 0 as os::raw::c_int as u32;
     let mut limit: u32 = (*self_0).size.wrapping_div(2);
     while i < limit {
         let mut reverse_index: usize = (*self_0).size.wrapping_sub(1).wrapping_sub(i) as usize;
         let mut swap: Subtree = *(*self_0).contents.offset(i as isize);
-        *(*self_0).contents.offset(i as isize) = *(*self_0).contents.offset(reverse_index as isize);
-        *(*self_0).contents.offset(reverse_index as isize) = swap;
+        *(*self_0).contents.offset(i as isize) = *(*self_0).contents.add(reverse_index);
+        *(*self_0).contents.add(reverse_index) = swap;
         i = i.wrapping_add(1)
     }
 }
 // SubtreePool
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_pool_new(mut capacity: u32) -> SubtreePool {
-    let mut self_0: SubtreePool = {
-        let mut init = SubtreePool {
-            free_trees: {
-                let mut init = MutableSubtreeArray {
-                    contents: std::ptr::null_mut::<MutableSubtree>(),
-                    size: 0 as os::raw::c_int as u32,
-                    capacity: 0 as os::raw::c_int as u32,
-                };
-                init
-            },
-            tree_stack: {
-                let mut init = MutableSubtreeArray {
-                    contents: std::ptr::null_mut::<MutableSubtree>(),
-                    size: 0 as os::raw::c_int as u32,
-                    capacity: 0 as os::raw::c_int as u32,
-                };
-                init
-            },
-        };
-        init
+pub(crate) unsafe extern "C" fn ts_subtree_pool_new(mut capacity: u32) -> SubtreePool {
+    let mut self_0 = SubtreePool {
+        free_trees: MutableSubtreeArray {
+            contents: std::ptr::null_mut::<MutableSubtree>(),
+            size: 0 as os::raw::c_int as u32,
+            capacity: 0 as os::raw::c_int as u32,
+        },
+        tree_stack: MutableSubtreeArray {
+            contents: std::ptr::null_mut::<MutableSubtree>(),
+            size: 0 as os::raw::c_int as u32,
+            capacity: 0 as os::raw::c_int as u32,
+        },
     };
     array__reserve(
         &mut self_0.free_trees as *mut MutableSubtreeArray as *mut VoidArray,
         ::std::mem::size_of::<MutableSubtree>(),
         capacity,
     );
-    return self_0;
+    self_0
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_pool_delete(mut self_0: *mut SubtreePool) {
+pub(crate) unsafe extern "C" fn ts_subtree_pool_delete(mut self_0: *mut SubtreePool) {
     if !(*self_0).free_trees.contents.is_null() {
         let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
         while i < (*self_0).free_trees.size {
@@ -254,14 +241,14 @@ unsafe extern "C" fn ts_subtree_pool_allocate(
 ) -> *mut SubtreeHeapData {
     if (*self_0).free_trees.size > 0 as os::raw::c_int as os::raw::c_uint {
         (*self_0).free_trees.size = (*self_0).free_trees.size.wrapping_sub(1);
-        return (*(*self_0)
+        (*(*self_0)
             .free_trees
             .contents
             .offset((*self_0).free_trees.size as isize))
-        .ptr;
+        .ptr
     } else {
-        return ts_malloc(::std::mem::size_of::<SubtreeHeapData>()) as *mut SubtreeHeapData;
-    };
+        ts_malloc(::std::mem::size_of::<SubtreeHeapData>()) as *mut SubtreeHeapData
+    }
 }
 unsafe extern "C" fn ts_subtree_pool_free(
     mut self_0: *mut SubtreePool,
@@ -289,15 +276,15 @@ unsafe extern "C" fn ts_subtree_can_inline(
     mut size: Length,
     mut lookahead_bytes: u32,
 ) -> bool {
-    return padding.bytes < 255 as os::raw::c_int as os::raw::c_uint
+    padding.bytes < 255 as os::raw::c_int as os::raw::c_uint
         && padding.extent.row < 16 as os::raw::c_int as os::raw::c_uint
         && padding.extent.column < 255 as os::raw::c_int as os::raw::c_uint
         && size.extent.row == 0 as os::raw::c_int as os::raw::c_uint
         && size.extent.column < 255 as os::raw::c_int as os::raw::c_uint
-        && lookahead_bytes < 16 as os::raw::c_int as os::raw::c_uint;
+        && lookahead_bytes < 16 as os::raw::c_int as os::raw::c_uint
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_new_leaf(
+pub(crate) unsafe extern "C" fn ts_subtree_new_leaf(
     mut pool: *mut SubtreePool,
     mut symbol: TSSymbol,
     mut padding: Length,
@@ -314,7 +301,7 @@ pub unsafe extern "C" fn ts_subtree_new_leaf(
         && !has_external_tokens
         && ts_subtree_can_inline(padding, size, lookahead_bytes) as os::raw::c_int != 0;
     if is_inline {
-        return Subtree {
+        Subtree {
             data: {
                 let mut init = SubtreeInlineData {
                     is_inline_visible_named_extra_has_changes_is_missing_is_keyword: [0; 1],
@@ -323,7 +310,7 @@ pub unsafe extern "C" fn ts_subtree_new_leaf(
                     padding_bytes: padding.bytes as u8,
                     size_bytes: size.bytes as u8,
                     padding_columns: padding.extent.column as u8,
-                    parse_state: parse_state,
+                    parse_state,
                 };
                 init.set_is_inline(1 as os::raw::c_int != 0);
                 init.set_visible(metadata.visible());
@@ -336,61 +323,38 @@ pub unsafe extern "C" fn ts_subtree_new_leaf(
                 init.set_lookahead_bytes(lookahead_bytes as u8);
                 init
             },
-        };
+        }
     } else {
         let mut data: *mut SubtreeHeapData = ts_subtree_pool_allocate(pool);
         *data = {
-            let mut init =
-                    SubtreeHeapData{visible_named_extra_fragile_left_fragile_right_has_changes_has_external_tokens_is_missing_is_keyword:
-                                        [0; 2],
-                                    c2rust_padding: [0; 2],
-                                    ref_count: 1 as os::raw::c_int as u32,
-                                    padding: padding,
-                                    size: size,
-                                    lookahead_bytes: lookahead_bytes,
-                                    error_cost: 0 as os::raw::c_int as u32,
-                                    child_count: 0 as os::raw::c_int as u32,
-                                    symbol: symbol,
-                                    parse_state: parse_state,
-                                    c2rust_unnamed:
-                                        SubtreeHeapDataContent{c2rust_unnamed:
-                                                            {
-                                                                let mut init =
-                                                                    SubtreeHeapDataContentData{children:
-                                                                                        0
-                                                                                            as
-                                                                                            *mut Subtree,
-                                                                                    visible_child_count:
-                                                                                        0,
-                                                                                    named_child_count:
-                                                                                        0,
-                                                                                    node_count:
-                                                                                        0,
-                                                                                    repeat_depth:
-                                                                                        0,
-                                                                                    dynamic_precedence:
-                                                                                        0,
-                                                                                    production_id:
-                                                                                        0,
-                                                                                    first_leaf:
-                                                                                        {
-                                                                                            let mut init =
-                                                                                                SubtreeHeapDataContentDataFirstLeaf{symbol:
-                                                                                                                    0
-                                                                                                                        as
-                                                                                                                        os::raw::c_int
-                                                                                                                        as
-                                                                                                                        TSSymbol,
-                                                                                                                parse_state:
-                                                                                                                    0
-                                                                                                                        as
-                                                                                                                        os::raw::c_int
-                                                                                                                        as
-                                                                                                                        TSStateId,};
-                                                                                            init
-                                                                                        },};
-                                                                init
-                                                            },},};
+            let data_content = SubtreeHeapDataContentData {
+                children: ptr::null_mut(),
+                visible_child_count: 0,
+                named_child_count: 0,
+                node_count: 0,
+                repeat_depth: 0,
+                dynamic_precedence: 0,
+                production_id: 0,
+                first_leaf: SubtreeHeapDataContentDataFirstLeaf {
+                    symbol: 0 as os::raw::c_int as TSSymbol,
+                    parse_state: 0 as os::raw::c_int as TSStateId,
+                },
+            };
+            let mut init = SubtreeHeapData {
+                visible_named_extra_fragile_left_fragile_right_has_changes_has_external_tokens_is_missing_is_keyword: [0; 2],
+                c2rust_padding: [0; 2],
+                ref_count: 1 as os::raw::c_int as u32,
+                padding,
+                size,
+                lookahead_bytes,
+                error_cost: 0 as os::raw::c_int as u32,
+                child_count: 0 as os::raw::c_int as u32,
+                symbol,
+                parse_state,
+                c2rust_unnamed: SubtreeHeapDataContent{
+                    c2rust_unnamed: data_content
+                },
+            };
             init.set_visible(metadata.visible());
             init.set_named(metadata.named());
             init.set_extra(extra);
@@ -402,11 +366,11 @@ pub unsafe extern "C" fn ts_subtree_new_leaf(
             init.set_is_keyword(is_keyword);
             init
         };
-        return Subtree { ptr: data };
-    };
+        Subtree { ptr: data }
+    }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_set_symbol(
+pub(crate) unsafe extern "C" fn ts_subtree_set_symbol(
     mut self_0: *mut MutableSubtree,
     mut symbol: TSSymbol,
     mut language: *const TSLanguage,
@@ -424,7 +388,7 @@ pub unsafe extern "C" fn ts_subtree_set_symbol(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_new_error(
+pub(crate) unsafe extern "C" fn ts_subtree_new_error(
     mut pool: *mut SubtreePool,
     mut lookahead_char: i32,
     mut padding: Length,
@@ -448,10 +412,10 @@ pub unsafe extern "C" fn ts_subtree_new_error(
     (*data).set_fragile_left(1 as os::raw::c_int != 0);
     (*data).set_fragile_right(1 as os::raw::c_int != 0);
     (*data).c2rust_unnamed.lookahead_char = lookahead_char;
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_make_mut(
+pub(crate) unsafe extern "C" fn ts_subtree_make_mut(
     mut pool: *mut SubtreePool,
     mut self_0: Subtree,
 ) -> MutableSubtree {
@@ -493,7 +457,7 @@ pub unsafe extern "C" fn ts_subtree_make_mut(
         1 as os::raw::c_int as u32,
     );
     ts_subtree_release(pool, self_0);
-    return MutableSubtree { ptr: result };
+    MutableSubtree { ptr: result }
 }
 unsafe extern "C" fn ts_subtree__compress(
     mut self_0: MutableSubtree,
@@ -608,7 +572,7 @@ unsafe extern "C" fn ts_subtree__compress(
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_balance(
+pub(crate) unsafe extern "C" fn ts_subtree_balance(
     mut self_0: Subtree,
     mut pool: *mut SubtreePool,
     mut language: *const TSLanguage,
@@ -683,7 +647,7 @@ pub unsafe extern "C" fn ts_subtree_balance(
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_set_children(
+pub(crate) unsafe extern "C" fn ts_subtree_set_children(
     mut self_0: MutableSubtree,
     mut children: *mut Subtree,
     mut child_count: u32,
@@ -864,25 +828,24 @@ pub unsafe extern "C" fn ts_subtree_set_children(
                 .children
                 .offset(i_0 as isize);
             let mut grandchild_count: u32 = ts_subtree_child_count(child_0);
-            if !ts_subtree_extra(child_0) {
-                if !(ts_subtree_is_error(child_0) as os::raw::c_int != 0
+            if !(ts_subtree_extra(child_0)
+                || ts_subtree_is_error(child_0) as os::raw::c_int != 0
                     && grandchild_count == 0 as os::raw::c_int as os::raw::c_uint)
-                {
-                    if ts_subtree_visible(child_0) {
-                        (*self_0.ptr).error_cost = ((*self_0.ptr).error_cost as os::raw::c_uint)
-                            .wrapping_add(100)
-                            as u32 as u32
-                    } else if grandchild_count > 0 as os::raw::c_int as os::raw::c_uint {
-                        (*self_0.ptr).error_cost = ((*self_0.ptr).error_cost as os::raw::c_uint)
-                            .wrapping_add(
-                                (100 as os::raw::c_int as os::raw::c_uint).wrapping_mul(
-                                    (*child_0.ptr)
-                                        .c2rust_unnamed
-                                        .c2rust_unnamed
-                                        .visible_child_count,
-                                ),
-                            ) as u32 as u32
-                    }
+            {
+                if ts_subtree_visible(child_0) {
+                    (*self_0.ptr).error_cost = ((*self_0.ptr).error_cost as os::raw::c_uint)
+                        .wrapping_add(100) as u32
+                        as u32
+                } else if grandchild_count > 0 as os::raw::c_int as os::raw::c_uint {
+                    (*self_0.ptr).error_cost = ((*self_0.ptr).error_cost as os::raw::c_uint)
+                        .wrapping_add(
+                            (100 as os::raw::c_int as os::raw::c_uint).wrapping_mul(
+                                (*child_0.ptr)
+                                    .c2rust_unnamed
+                                    .c2rust_unnamed
+                                    .visible_child_count,
+                            ),
+                        ) as u32 as u32
                 }
             }
             i_0 = i_0.wrapping_add(1)
@@ -932,7 +895,7 @@ pub unsafe extern "C" fn ts_subtree_set_children(
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_new_node(
+pub(crate) unsafe extern "C" fn ts_subtree_new_node(
     mut pool: *mut SubtreePool,
     mut symbol: TSSymbol,
     mut children: *mut SubtreeArray,
@@ -946,69 +909,40 @@ pub unsafe extern "C" fn ts_subtree_new_node(
             == -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int - 1 as os::raw::c_int;
     let mut data: *mut SubtreeHeapData = ts_subtree_pool_allocate(pool);
     *data = {
-        let mut init =
-                SubtreeHeapData{visible_named_extra_fragile_left_fragile_right_has_changes_has_external_tokens_is_missing_is_keyword:
-                                    [0; 2],
-                                c2rust_padding: [0; 2],
-                                ref_count: 1 as os::raw::c_int as u32,
-                                padding:
-                                    Length{bytes: 0,
-                                           extent:
-                                               TSPoint{row: 0, column: 0,},},
-                                size:
-                                    Length{bytes: 0,
-                                           extent:
-                                               TSPoint{row: 0, column: 0,},},
-                                lookahead_bytes: 0,
-                                error_cost: 0,
-                                child_count: 0,
-                                symbol: symbol,
-                                parse_state: 0,
-                                c2rust_unnamed:
-                                    SubtreeHeapDataContent{c2rust_unnamed:
-                                                        {
-                                                            let mut init =
-                                                                SubtreeHeapDataContentData{children:
-                                                                                    0
-                                                                                        as
-                                                                                        *mut Subtree,
-                                                                                visible_child_count:
-                                                                                    0,
-                                                                                named_child_count:
-                                                                                    0,
-                                                                                node_count:
-                                                                                    0
-                                                                                        as
-                                                                                        os::raw::c_int
-                                                                                        as
-                                                                                        u32,
-                                                                                repeat_depth:
-                                                                                    0,
-                                                                                dynamic_precedence:
-                                                                                    0,
-                                                                                production_id:
-                                                                                    production_id
-                                                                                        as
-                                                                                        u16,
-                                                                                first_leaf:
-                                                                                    {
-                                                                                        let mut init =
-                                                                                            SubtreeHeapDataContentDataFirstLeaf{symbol:
-                                                                                                                0
-                                                                                                                    as
-                                                                                                                    os::raw::c_int
-                                                                                                                    as
-                                                                                                                    TSSymbol,
-                                                                                                            parse_state:
-                                                                                                                0
-                                                                                                                    as
-                                                                                                                    os::raw::c_int
-                                                                                                                    as
-                                                                                                                    TSStateId,};
-                                                                                        init
-                                                                                    },};
-                                                            init
-                                                        },},};
+        let data_content = SubtreeHeapDataContent {
+            c2rust_unnamed: SubtreeHeapDataContentData {
+                children: ptr::null_mut(),
+                visible_child_count: 0,
+                named_child_count: 0,
+                node_count: 0,
+                repeat_depth: 0,
+                dynamic_precedence: 0,
+                production_id: production_id as u16,
+                first_leaf: SubtreeHeapDataContentDataFirstLeaf {
+                    symbol: 0,
+                    parse_state: 0,
+                },
+            },
+        };
+        let mut init = SubtreeHeapData{
+            visible_named_extra_fragile_left_fragile_right_has_changes_has_external_tokens_is_missing_is_keyword: [0; 2],
+            c2rust_padding: [0; 2],
+            ref_count: 1 as os::raw::c_int as u32,
+            padding: Length{
+                bytes: 0,
+                extent: TSPoint{row: 0, column: 0,},
+            },
+            size: Length{
+                bytes: 0,
+                extent: TSPoint{row: 0, column: 0,},
+            },
+            lookahead_bytes: 0,
+            error_cost: 0,
+            child_count: 0,
+            symbol,
+            parse_state: 0,
+            c2rust_unnamed: data_content,
+        };
         init.set_visible(metadata.visible());
         init.set_named(metadata.named());
         init.set_extra(false);
@@ -1022,10 +956,10 @@ pub unsafe extern "C" fn ts_subtree_new_node(
     };
     let mut result: MutableSubtree = MutableSubtree { ptr: data };
     ts_subtree_set_children(result, (*children).contents, (*children).size, language);
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_new_error_node(
+pub(crate) unsafe extern "C" fn ts_subtree_new_error_node(
     mut pool: *mut SubtreePool,
     mut children: *mut SubtreeArray,
     mut extra: bool,
@@ -1039,10 +973,10 @@ pub unsafe extern "C" fn ts_subtree_new_error_node(
         language,
     );
     (*result.ptr).set_extra(extra);
-    return ts_subtree_from_mut(result);
+    ts_subtree_from_mut(result)
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_new_missing_leaf(
+pub(crate) unsafe extern "C" fn ts_subtree_new_missing_leaf(
     mut pool: *mut SubtreePool,
     mut symbol: TSSymbol,
     mut padding: Length,
@@ -1062,13 +996,13 @@ pub unsafe extern "C" fn ts_subtree_new_missing_leaf(
     if result.data.is_inline() {
         result.data.set_is_missing(1 as os::raw::c_int != 0)
     } else {
-        let ref mut fresh9 = *(result.ptr as *mut SubtreeHeapData);
+        let fresh9 = &mut *(result.ptr as *mut SubtreeHeapData);
         (*fresh9).set_is_missing(1 as os::raw::c_int != 0)
     }
-    return result;
+    result
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_retain(mut self_0: Subtree) {
+pub(crate) unsafe extern "C" fn ts_subtree_retain(mut self_0: Subtree) {
     if self_0.data.is_inline() {
         return;
     }
@@ -1077,7 +1011,10 @@ pub unsafe extern "C" fn ts_subtree_retain(mut self_0: Subtree) {
     assert!((*self_0.ptr).ref_count != 0 as os::raw::c_int as os::raw::c_uint);
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_release(mut pool: *mut SubtreePool, mut self_0: Subtree) {
+pub(crate) unsafe extern "C" fn ts_subtree_release(
+    mut pool: *mut SubtreePool,
+    mut self_0: Subtree,
+) {
     if self_0.data.is_inline() {
         return;
     }
@@ -1137,7 +1074,7 @@ pub unsafe extern "C" fn ts_subtree_release(mut pool: *mut SubtreePool, mut self
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Subtree) -> bool {
+pub(crate) unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Subtree) -> bool {
     if self_0.data.is_inline() as os::raw::c_int != 0
         || other.data.is_inline() as os::raw::c_int != 0
     {
@@ -1219,10 +1156,10 @@ pub unsafe extern "C" fn ts_subtree_eq(mut self_0: Subtree, mut other: Subtree) 
             i = i.wrapping_add(1)
         }
     }
-    return 1 as os::raw::c_int != 0;
+    true
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_compare(
+pub(crate) unsafe extern "C" fn ts_subtree_compare(
     mut left: Subtree,
     mut right: Subtree,
 ) -> os::raw::c_int {
@@ -1258,7 +1195,7 @@ pub unsafe extern "C" fn ts_subtree_compare(
         }
         i = i.wrapping_add(1)
     }
-    return 0 as os::raw::c_int;
+    0 as os::raw::c_int
 }
 #[inline]
 unsafe extern "C" fn ts_subtree_set_has_changes(mut self_0: *mut MutableSubtree) {
@@ -1269,7 +1206,7 @@ unsafe extern "C" fn ts_subtree_set_has_changes(mut self_0: *mut MutableSubtree)
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_edit(
+pub(crate) unsafe extern "C" fn ts_subtree_edit(
     mut self_0: Subtree,
     mut edit: *const TSInputEdit,
     mut pool: *mut SubtreePool,
@@ -1289,13 +1226,10 @@ pub unsafe extern "C" fn ts_subtree_edit(
         pub capacity: u32,
     }
 
-    let mut stack: StackEntryArray = {
-        let mut init = StackEntryArray {
-            contents: std::ptr::null_mut::<LocStackEntry>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        };
-        init
+    let mut stack = StackEntryArray {
+        contents: std::ptr::null_mut::<LocStackEntry>(),
+        size: 0 as os::raw::c_int as u32,
+        capacity: 0 as os::raw::c_int as u32,
     };
     array__grow(
         &mut stack as *mut StackEntryArray as *mut VoidArray,
@@ -1304,37 +1238,22 @@ pub unsafe extern "C" fn ts_subtree_edit(
     );
     let fresh12 = stack.size;
     stack.size = stack.size.wrapping_add(1);
-    *stack.contents.offset(fresh12 as isize) = {
-        let mut init = LocStackEntry {
-            tree: &mut self_0,
-            edit: {
-                let mut init = Edit {
-                    start: {
-                        let mut init = Length {
-                            bytes: (*edit).start_byte,
-                            extent: (*edit).start_point,
-                        };
-                        init
-                    },
-                    old_end: {
-                        let mut init = Length {
-                            bytes: (*edit).old_end_byte,
-                            extent: (*edit).old_end_point,
-                        };
-                        init
-                    },
-                    new_end: {
-                        let mut init = Length {
-                            bytes: (*edit).new_end_byte,
-                            extent: (*edit).new_end_point,
-                        };
-                        init
-                    },
-                };
-                init
+    *stack.contents.offset(fresh12 as isize) = LocStackEntry {
+        tree: &mut self_0,
+        edit: Edit {
+            start: Length {
+                bytes: (*edit).start_byte,
+                extent: (*edit).start_point,
             },
-        };
-        init
+            old_end: Length {
+                bytes: (*edit).old_end_byte,
+                extent: (*edit).old_end_point,
+            },
+            new_end: Length {
+                bytes: (*edit).new_end_byte,
+                extent: (*edit).new_end_point,
+            },
+        },
     };
     while stack.size != 0 {
         stack.size = stack.size.wrapping_sub(1);
@@ -1434,10 +1353,10 @@ pub unsafe extern "C" fn ts_subtree_edit(
             child_left = child_right;
             child_right = length_add(child_left, child_size);
             // If this child ends before the edit, it is not affected.
-            if !(child_right
+            if child_right
                 .bytes
                 .wrapping_add(ts_subtree_lookahead_bytes(*child))
-                < edit_0.start.bytes)
+                >= edit_0.start.bytes
             {
                 // If this child starts after the edit, then we're done processing children.
                 if child_left.bytes > edit_0.old_end.bytes
@@ -1448,13 +1367,10 @@ pub unsafe extern "C" fn ts_subtree_edit(
                     break;
                 }
                 // Transform edit into the child's coordinate space.
-                let mut child_edit: Edit = {
-                    let mut init = Edit {
-                        start: length_sub(edit_0.start, child_left),
-                        old_end: length_sub(edit_0.old_end, child_left),
-                        new_end: length_sub(edit_0.new_end, child_left),
-                    };
-                    init
+                let mut child_edit = Edit {
+                    start: length_sub(edit_0.start, child_left),
+                    old_end: length_sub(edit_0.old_end, child_left),
+                    new_end: length_sub(edit_0.new_end, child_left),
                 };
                 // Clamp child_edit to the child's bounds.
                 if edit_0.start.bytes < child_left.bytes {
@@ -1490,22 +1406,19 @@ pub unsafe extern "C" fn ts_subtree_edit(
                 );
                 let fresh13 = stack.size;
                 stack.size = stack.size.wrapping_add(1);
-                *stack.contents.offset(fresh13 as isize) = {
-                    let mut init = LocStackEntry {
-                        tree: child,
-                        edit: child_edit,
-                    };
-                    init
+                *stack.contents.offset(fresh13 as isize) = LocStackEntry {
+                    tree: child,
+                    edit: child_edit,
                 }
             }
             i = i.wrapping_add(1)
         }
     }
     array__delete(&mut stack as *mut StackEntryArray as *mut VoidArray);
-    return self_0;
+    self_0
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_last_external_token(mut tree: Subtree) -> Subtree {
+pub(crate) unsafe extern "C" fn ts_subtree_last_external_token(mut tree: Subtree) -> Subtree {
     if !ts_subtree_has_external_tokens(tree) {
         return Subtree {
             ptr: std::ptr::null::<SubtreeHeapData>(),
@@ -1527,7 +1440,7 @@ pub unsafe extern "C" fn ts_subtree_last_external_token(mut tree: Subtree) -> Su
             }
         }
     }
-    return tree;
+    tree
 }
 unsafe extern "C" fn ts_subtree__write_char_to_string(
     mut s: *mut os::raw::c_char,
@@ -1598,16 +1511,16 @@ unsafe extern "C" fn ts_subtree__write_to_string(
         }) != 0;
     if is_visible {
         if !is_root {
-            cursor = cursor.offset(snwrite!(*writer, limit as usize, " ",).unwrap() as isize);
+            cursor = cursor.add(snwrite!(*writer, limit as usize, " ",).unwrap());
             if !field_name.is_null() {
-                cursor = cursor.offset(
+                cursor = cursor.add(
                     snwrite!(
                         *writer,
                         limit as usize,
                         "{}: ",
                         CStr::from_ptr(field_name).to_string_lossy()
                     )
-                    .unwrap() as isize,
+                    .unwrap(),
                 )
             }
         }
@@ -1615,13 +1528,12 @@ unsafe extern "C" fn ts_subtree__write_to_string(
             && ts_subtree_child_count(self_0) == 0 as os::raw::c_int as os::raw::c_uint
             && (*self_0.ptr).size.bytes > 0 as os::raw::c_int as os::raw::c_uint
         {
-            cursor =
-                cursor.offset(snwrite!(*writer, limit as usize, "(UNEXPECTED ").unwrap() as isize);
-            cursor = cursor.offset(ts_subtree__write_char_to_string(
+            cursor = cursor.add(snwrite!(*writer, limit as usize, "(UNEXPECTED ").unwrap());
+            cursor = cursor.add(ts_subtree__write_char_to_string(
                 *writer,
                 limit,
                 (*self_0.ptr).c2rust_unnamed.lookahead_char,
-            ) as isize)
+            ))
         } else {
             let mut symbol: TSSymbol = if alias_symbol as os::raw::c_int != 0 {
                 alias_symbol as os::raw::c_int
@@ -1630,54 +1542,53 @@ unsafe extern "C" fn ts_subtree__write_to_string(
             } as TSSymbol;
             let mut symbol_name: *const os::raw::c_char = ts_language_symbol_name(language, symbol);
             if ts_subtree_missing(self_0) {
-                cursor = cursor
-                    .offset(snwrite!(*writer, limit as usize, "(MISSING ",).unwrap() as isize);
+                cursor = cursor.add(snwrite!(*writer, limit as usize, "(MISSING ",).unwrap());
                 if alias_is_named as os::raw::c_int != 0
                     || ts_subtree_named(self_0) as os::raw::c_int != 0
                 {
-                    cursor = cursor.offset(
+                    cursor = cursor.add(
                         snwrite!(
                             *writer,
                             limit as usize,
                             "{}",
                             CStr::from_ptr(symbol_name).to_string_lossy(),
                         )
-                        .unwrap() as isize,
+                        .unwrap(),
                     )
                 } else {
-                    cursor = cursor.offset(
+                    cursor = cursor.add(
                         snwrite!(
                             *writer,
                             limit as usize,
                             "\"{}\"",
                             CStr::from_ptr(symbol_name).to_string_lossy(),
                         )
-                        .unwrap() as isize,
+                        .unwrap(),
                     )
                 }
             } else {
-                cursor = cursor.offset(
+                cursor = cursor.add(
                     snwrite!(
                         *writer,
                         limit as usize,
                         "({}",
                         CStr::from_ptr(symbol_name).to_string_lossy(),
                     )
-                    .unwrap() as isize,
+                    .unwrap(),
                 )
             }
         }
     } else if is_root {
         let mut symbol_0: TSSymbol = ts_subtree_symbol(self_0);
         let mut symbol_name_0: *const os::raw::c_char = ts_language_symbol_name(language, symbol_0);
-        cursor = cursor.offset(
+        cursor = cursor.add(
             snwrite!(
                 *writer,
                 limit as usize,
                 "(\"{}\")",
                 CStr::from_ptr(symbol_name_0).to_string_lossy(),
             )
-            .unwrap() as isize,
+            .unwrap(),
         )
     }
     if ts_subtree_child_count(self_0) != 0 {
@@ -1702,7 +1613,7 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                 .children
                 .offset(i as isize);
             if ts_subtree_extra(child) {
-                cursor = cursor.offset(ts_subtree__write_to_string(
+                cursor = cursor.add(ts_subtree__write_to_string(
                     child,
                     *writer,
                     limit,
@@ -1710,8 +1621,8 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                     include_all,
                     0 as os::raw::c_int as TSSymbol,
                     0 as os::raw::c_int != 0,
-                    0 as *const os::raw::c_char,
-                ) as isize)
+                    ptr::null(),
+                ))
             } else {
                 let mut alias_symbol_0: TSSymbol = if !alias_sequence.is_null() {
                     *alias_sequence.offset(structural_child_index as isize) as os::raw::c_int
@@ -1725,7 +1636,7 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                 } != 0;
                 let mut child_field_name: *const os::raw::c_char =
                     if is_visible as os::raw::c_int != 0 {
-                        0 as *const os::raw::c_char
+                        ptr::null()
                     } else {
                         field_name
                     };
@@ -1741,7 +1652,7 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                         i_0 = i_0.offset(1)
                     }
                 }
-                cursor = cursor.offset(ts_subtree__write_to_string(
+                cursor = cursor.add(ts_subtree__write_to_string(
                     child,
                     *writer,
                     limit,
@@ -1750,19 +1661,19 @@ unsafe extern "C" fn ts_subtree__write_to_string(
                     alias_symbol_0,
                     alias_is_named_0,
                     child_field_name,
-                ) as isize);
+                ));
                 structural_child_index = structural_child_index.wrapping_add(1)
             }
             i = i.wrapping_add(1)
         }
     }
     if is_visible {
-        cursor = cursor.offset(snwrite!(*writer, limit as usize, ")",).unwrap() as isize)
+        cursor = cursor.add(snwrite!(*writer, limit as usize, ")",).unwrap())
     }
-    return cursor.wrapping_offset_from_(string) as os::raw::c_long as usize;
+    cursor.wrapping_offset_from_(string) as os::raw::c_long as usize
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_string(
+pub(crate) unsafe extern "C" fn ts_subtree_string(
     mut self_0: Subtree,
     mut language: *const TSLanguage,
     mut include_all: bool,
@@ -1796,9 +1707,9 @@ pub unsafe extern "C" fn ts_subtree_string(
         0 as os::raw::c_int != 0,
         ROOT_FIELD,
     );
-    return result;
+    result
 }
-pub unsafe fn ts_subtree__print_dot_graph<W>(
+pub(crate) unsafe fn ts_subtree__print_dot_graph<W>(
     mut self_0: *const Subtree,
     mut start_offset: u32,
     mut language: *const TSLanguage,
@@ -1841,7 +1752,7 @@ pub unsafe fn ts_subtree__print_dot_graph<W>(
         )
         .unwrap();
     }
-    write!(f, "\"]\n").unwrap();
+    writeln!(f, "\"]").unwrap();
     let mut child_start_offset: u32 = start_offset;
     let mut child_info_offset: u32 = ((*language).max_alias_sequence_length as os::raw::c_int
         * ts_subtree_production_id(*self_0) as os::raw::c_int)
@@ -1862,9 +1773,9 @@ pub unsafe fn ts_subtree__print_dot_graph<W>(
             child_info_offset = child_info_offset.wrapping_add(1)
         }
         ts_subtree__print_dot_graph(child, child_start_offset, language, alias_symbol_0, f);
-        write!(
+        writeln!(
             f,
-            "tree_{:x} -> tree_{:x} [tooltip={}]\n",
+            "tree_{:x} -> tree_{:x} [tooltip={}]",
             self_0 as usize, child as usize, i,
         )
         .unwrap();
@@ -1874,26 +1785,26 @@ pub unsafe fn ts_subtree__print_dot_graph<W>(
         i = i.wrapping_add(1)
     }
 }
-pub unsafe fn ts_subtree_print_dot_graph<W>(
+pub(crate) unsafe fn ts_subtree_print_dot_graph<W>(
     mut self_0: Subtree,
     mut language: *const TSLanguage,
     mut f: &mut W,
 ) where
     W: Write,
 {
-    write!(f, "digraph tree {{\n").unwrap();
-    write!(f, "edge [arrowhead=none]\n").unwrap();
+    writeln!(f, "digraph tree {{").unwrap();
+    writeln!(f, "edge [arrowhead=none]").unwrap();
     ts_subtree__print_dot_graph(
-        &mut self_0,
+        &self_0,
         0 as os::raw::c_int as u32,
         language,
         0 as os::raw::c_int as TSSymbol,
         f,
     );
-    write!(f, "}}\n").unwrap();
+    writeln!(f, "}}").unwrap();
 }
 #[no_mangle]
-pub unsafe extern "C" fn ts_subtree_external_scanner_state_eq(
+pub(crate) unsafe extern "C" fn ts_subtree_external_scanner_state_eq(
     mut self_0: Subtree,
     mut other: Subtree,
 ) -> bool {
@@ -1911,5 +1822,5 @@ pub unsafe extern "C" fn ts_subtree_external_scanner_state_eq(
     {
         state2 = &(*other.ptr).c2rust_unnamed.external_scanner_state
     }
-    return ts_external_scanner_state_eq(state1, state2);
+    ts_external_scanner_state_eq(state1, state2)
 }
