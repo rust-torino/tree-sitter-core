@@ -8,6 +8,7 @@ use std::{
     mem, ptr,
 };
 
+/// Write a DOT graph describing the syntax tree to the given file.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_print_dot_graph(self_0: *const TSTree, file: *mut libc::FILE) {
     ts_subtree_print_dot_graph((*self_0).root, (*self_0).language, &mut CFile(file));

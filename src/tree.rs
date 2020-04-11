@@ -29,6 +29,11 @@ pub(crate) unsafe extern "C" fn ts_tree_new(
     (*result).included_range_count = included_range_count;
     result
 }
+
+/// Create a shallow copy of the syntax tree. This is very fast.
+///
+/// You need to copy a syntax tree in order to use it on more than one thread at
+/// a time, as syntax trees are not thread safe.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_copy(mut self_0: *const TSTree) -> *mut TSTree {
     ts_subtree_retain((*self_0).root);
@@ -39,6 +44,8 @@ pub unsafe extern "C" fn ts_tree_copy(mut self_0: *const TSTree) -> *mut TSTree 
         (*self_0).included_range_count,
     )
 }
+
+/// Delete the syntax tree, freeing all of the memory that it used.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_delete(mut self_0: *mut TSTree) {
     if self_0.is_null() {
@@ -53,6 +60,8 @@ pub unsafe extern "C" fn ts_tree_delete(mut self_0: *mut TSTree) {
     }
     ts_free(self_0 as *mut ffi::c_void);
 }
+
+/// Get the root node of the syntax tree.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_root_node(mut self_0: *const TSTree) -> TSNode {
     ts_node_new(
@@ -62,10 +71,18 @@ pub unsafe extern "C" fn ts_tree_root_node(mut self_0: *const TSTree) -> TSNode 
         0 as os::raw::c_int as TSSymbol,
     )
 }
+
+/// Get the language that was used to parse the syntax tree.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_language(mut self_0: *const TSTree) -> *const TSLanguage {
     (*self_0).language
 }
+
+/// Edit the syntax tree to keep it in sync with source code that has been
+/// edited.
+///
+/// You must describe the edit both in terms of byte offsets and in terms of
+/// (row, column) coordinates.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const TSInputEdit) {
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
@@ -114,6 +131,19 @@ pub unsafe extern "C" fn ts_tree_edit(mut self_0: *mut TSTree, mut edit: *const 
     (*self_0).parent_cache_size = 0 as os::raw::c_int as u32;
     ts_subtree_pool_delete(&mut pool);
 }
+
+/// Compare an old edited syntax tree to a new syntax tree representing the same
+/// document, returning an array of ranges whose syntactic structure has changed.
+///
+/// For this to work correctly, the old syntax tree must have been edited such
+/// that its ranges match up to the new tree. Generally, you'll want to call
+/// this function right after calling one of the `ts_parser_parse` functions.
+/// You need to pass the old tree that was passed to parse, as well as the new
+/// tree that was returned from that function.
+///
+/// The returned array is allocated using `malloc` and the caller is responsible
+/// for freeing it using `free`. The length of the array will be written to the
+/// given `length` pointer.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_get_changed_ranges(
     mut self_0: *const TSTree,

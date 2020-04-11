@@ -117,7 +117,12 @@ unsafe extern "C" fn ts_tree_cursor_child_iterator_next(
     }
     true
 }
-// TSTreeCursor - lifecycle
+
+/// Create a new tree cursor starting from the given node.
+///
+/// A tree cursor allows you to walk a syntax tree more efficiently than is
+/// possible using the `TSNode` functions. It is a mutable object that is always
+/// on a certain syntax node, and can be moved imperatively to different nodes.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_new(mut node: TSNode) -> TSTreeCursor {
     let mut self_0 = TSTreeCursor {
@@ -128,6 +133,8 @@ pub unsafe extern "C" fn ts_tree_cursor_new(mut node: TSNode) -> TSTreeCursor {
     ts_tree_cursor_init(&mut self_0 as *mut TSTreeCursor as *mut TreeCursor, node);
     self_0
 }
+
+/// Re-initialize a tree cursor to start at a different node.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_reset(mut _self: *mut TSTreeCursor, mut node: TSNode) {
     ts_tree_cursor_init(_self as *mut TreeCursor, node);
@@ -153,12 +160,18 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_init(mut self_0: *mut TreeCursor,
         structural_child_index: 0 as os::raw::c_int as u32,
     };
 }
+
+/// Delete a tree cursor, freeing all of the memory that it used.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_delete(mut _self: *mut TSTreeCursor) {
     let mut self_0: *mut TreeCursor = _self as *mut TreeCursor;
     array__delete(&mut (*self_0).stack as *mut TreeCursorEntryArray as *mut VoidArray);
 }
-// TSTreeCursor - walking the tree
+
+/// Move the cursor to the first child of its current node.
+///
+/// This returns `true` if the cursor successfully moved, and returns `false`
+/// if there were no children.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeCursor) -> bool {
     let mut self_0: *mut TreeCursor = _self as *mut TreeCursor;
@@ -210,6 +223,12 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child(mut _self: *mut TSTreeC
     }
     false
 }
+
+/// Move the cursor to the first child of its current node that extends beyond
+/// the given byte offset.
+///
+/// This returns the index of the child node if one was found, and returns -1
+/// if no such child was found.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_goto_first_child_for_byte(
     mut _self: *mut TSTreeCursor,
@@ -284,6 +303,11 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_first_child_for_byte(
     (*self_0).stack.size = initial_size;
     -(1 as os::raw::c_int) as i64
 }
+
+/// Move the cursor to the next sibling of its current node.
+///
+/// This returns `true` if the cursor successfully moved, and returns `false`
+/// if there was no next sibling node.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_goto_next_sibling(mut _self: *mut TSTreeCursor) -> bool {
     let mut self_0: *mut TreeCursor = _self as *mut TreeCursor;
@@ -332,6 +356,11 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_next_sibling(mut _self: *mut TSTree
     (*self_0).stack.size = initial_size;
     false
 }
+
+/// Move the cursor to the parent of its current node.
+///
+/// This returns `true` if the cursor successfully moved, and returns `false`
+/// if there was no parent node (the cursor was already on the root node).
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor) -> bool {
     let mut self_0: *mut TreeCursor = _self as *mut TreeCursor;
@@ -366,6 +395,8 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
     }
     false
 }
+
+/// Get the tree cursor's current node.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_current_node(mut _self: *const TSTreeCursor) -> TSNode {
     let mut self_0: *const TreeCursor = _self as *const TreeCursor;
@@ -495,6 +526,11 @@ pub(crate) unsafe extern "C" fn ts_tree_cursor_current_status(
     }
     result
 }
+
+/// Get the field name of the tree cursor's current node.
+///
+/// This returns zero if the current node doesn't have a field.
+/// See also `ts_node_child_by_field_id`, `ts_language_field_id_for_name`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_current_field_id(
     mut _self: *const TSTreeCursor,
@@ -555,6 +591,11 @@ pub unsafe extern "C" fn ts_tree_cursor_current_field_id(
     }
     0 as os::raw::c_int as TSFieldId
 }
+
+/// Get the field name of the tree cursor's current node.
+///
+/// This returns `NULL` if the current node doesn't have a field.
+/// See also `ts_node_child_by_field_name`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_tree_cursor_current_field_name(
     mut _self: *const TSTreeCursor,

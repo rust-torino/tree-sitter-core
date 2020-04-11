@@ -41,11 +41,14 @@ unsafe extern "C" fn ts_node__null() -> TSNode {
         0 as os::raw::c_int as TSSymbol,
     )
 }
-// TSNode - accessors
+
+/// Get the node's start byte.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_start_byte(mut self_0: TSNode) -> u32 {
     self_0.context[0 as os::raw::c_int as usize]
 }
+
+/// Get the node's start position in terms of rows and columns.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_start_point(mut self_0: TSNode) -> TSPoint {
     TSPoint {
@@ -477,11 +480,14 @@ unsafe extern "C" fn ts_node__descendant_for_point_range(
     }
     last_visible_node
 }
-// TSNode - public
+
+/// Get the node's end byte.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_end_byte(mut self_0: TSNode) -> u32 {
     ts_node_start_byte(self_0).wrapping_add(ts_subtree_size(ts_node__subtree(self_0)).bytes)
 }
+
+/// Get the node's end position in terms of rows and columns.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_end_point(mut self_0: TSNode) -> TSPoint {
     point_add(
@@ -489,6 +495,8 @@ pub unsafe extern "C" fn ts_node_end_point(mut self_0: TSNode) -> TSPoint {
         ts_subtree_size(ts_node__subtree(self_0)).extent,
     )
 }
+
+/// Get the node's type as a numerical id.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_symbol(mut self_0: TSNode) -> TSSymbol {
     let mut symbol: TSSymbol = ts_node__alias(&self_0) as TSSymbol;
@@ -497,6 +505,8 @@ pub unsafe extern "C" fn ts_node_symbol(mut self_0: TSNode) -> TSSymbol {
     }
     ts_language_public_symbol((*self_0.tree).language, symbol)
 }
+
+/// Get the node's type as a null-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_type(mut self_0: TSNode) -> *const os::raw::c_char {
     let mut symbol: TSSymbol = ts_node__alias(&self_0) as TSSymbol;
@@ -505,25 +515,40 @@ pub unsafe extern "C" fn ts_node_type(mut self_0: TSNode) -> *const os::raw::c_c
     }
     ts_language_symbol_name((*self_0.tree).language, symbol)
 }
+
+/// Get an S-expression representing the node as a string.
+///
+/// This string is allocated with `malloc` and the caller is responsible for
+/// freeing it using `free`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_string(mut self_0: TSNode) -> *mut os::raw::c_char {
     ts_subtree_string(ts_node__subtree(self_0), (*self_0.tree).language, false)
 }
-/* *
- * Check if two nodes are identical.
- */
+
+/// Check if two nodes are identical.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_node_eq(mut self_0: TSNode, mut other: TSNode) -> bool {
     self_0.tree == other.tree && self_0.id == other.id
 }
+
+/// Check if the node is null. Functions like `ts_node_child` and
+/// `ts_node_next_sibling` will return a null node to indicate that no such node
+/// was found.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_node_is_null(mut self_0: TSNode) -> bool {
     self_0.id.is_null()
 }
+
+/// Check if the node is *extra*. Extra nodes represent things like comments,
+/// which are not required the grammar, but can appear anywhere.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_is_extra(mut self_0: TSNode) -> bool {
     ts_subtree_extra(ts_node__subtree(self_0))
 }
+
+/// Check if the node is *named*. Named nodes correspond to named rules in the
+/// grammar, whereas *anonymous* nodes correspond to string literals in the
+/// grammar.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_is_named(mut self_0: TSNode) -> bool {
     let mut alias: TSSymbol = ts_node__alias(&self_0) as TSSymbol;
@@ -533,18 +558,27 @@ pub unsafe extern "C" fn ts_node_is_named(mut self_0: TSNode) -> bool {
         ts_subtree_named(ts_node__subtree(self_0)) as os::raw::c_int != 0
     }
 }
+
+/// Check if the node is *missing*. Missing nodes are inserted by the parser in
+/// order to recover from certain kinds of syntax errors.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_is_missing(mut self_0: TSNode) -> bool {
     ts_subtree_missing(ts_node__subtree(self_0))
 }
+
+/// Check if a syntax node has been edited.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_has_changes(mut self_0: TSNode) -> bool {
     ts_subtree_has_changes(ts_node__subtree(self_0))
 }
+
+/// Check if the node is a syntax error or contains any syntax errors.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_has_error(mut self_0: TSNode) -> bool {
     ts_subtree_error_cost(ts_node__subtree(self_0)) > 0 as os::raw::c_int as os::raw::c_uint
 }
+
+/// Get the node's immediate parent.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
     let mut node: TSNode = ts_tree_get_cached_parent(self_0.tree, &self_0);
@@ -584,14 +618,26 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
     }
     last_visible_node
 }
+
+/// Get the node's child at the given index, where zero represents the first
+/// child.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child(mut self_0: TSNode, mut child_index: u32) -> TSNode {
     ts_node__child(self_0, child_index, true)
 }
+
+/// Get the node's *named* child at the given index.
+///
+/// See also `ts_node_is_named`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_child(mut self_0: TSNode, mut child_index: u32) -> TSNode {
     ts_node__child(self_0, child_index, false)
 }
+
+/// Get the node's child with the given numerical field id.
+///
+/// You can convert a field name to an id using the
+/// `ts_language_field_id_for_name` function.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child_by_field_id(
     mut self_0: TSNode,
@@ -675,6 +721,8 @@ pub unsafe extern "C" fn ts_node_child_by_field_id(
         return ts_node__null();
     }
 }
+
+/// Get the node's child with the given field name.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child_by_field_name(
     mut self_0: TSNode,
@@ -685,6 +733,8 @@ pub unsafe extern "C" fn ts_node_child_by_field_name(
         ts_language_field_id_for_name((*self_0.tree).language, name, name_length);
     ts_node_child_by_field_id(self_0, field_id)
 }
+
+/// Get the node's number of children.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_child_count(mut self_0: TSNode) -> u32 {
     let mut tree: Subtree = ts_node__subtree(self_0);
@@ -697,6 +747,10 @@ pub unsafe extern "C" fn ts_node_child_count(mut self_0: TSNode) -> u32 {
         0 as os::raw::c_int as u32
     }
 }
+
+/// Get the node's number of *named* children.
+///
+/// See also `ts_node_is_named`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_child_count(mut self_0: TSNode) -> u32 {
     let mut tree: Subtree = ts_node__subtree(self_0);
@@ -706,18 +760,26 @@ pub unsafe extern "C" fn ts_node_named_child_count(mut self_0: TSNode) -> u32 {
         0 as os::raw::c_int as u32
     }
 }
+
+/// Get the node's next sibling.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_next_sibling(mut self_0: TSNode) -> TSNode {
     ts_node__next_sibling(self_0, true)
 }
+
+/// Get the node's next *named* sibling.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_next_named_sibling(mut self_0: TSNode) -> TSNode {
     ts_node__next_sibling(self_0, false)
 }
+
+/// Get the node's previous sibling.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_prev_sibling(mut self_0: TSNode) -> TSNode {
     ts_node__prev_sibling(self_0, true)
 }
+
+/// Get the node's previous *named* sibling.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_prev_named_sibling(mut self_0: TSNode) -> TSNode {
     ts_node__prev_sibling(self_0, false)
@@ -729,6 +791,8 @@ pub(crate) unsafe extern "C" fn ts_node_first_child_for_byte(
 ) -> TSNode {
     ts_node__first_child_for_byte(self_0, byte, true)
 }
+
+/// Get the node's first named child that extends beyond the given byte offset.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn ts_node_first_named_child_for_byte(
     mut self_0: TSNode,
@@ -736,6 +800,8 @@ pub(crate) unsafe extern "C" fn ts_node_first_named_child_for_byte(
 ) -> TSNode {
     ts_node__first_child_for_byte(self_0, byte, false)
 }
+
+/// Get the smallest node within this node that spans the given range of bytes
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_descendant_for_byte_range(
     mut self_0: TSNode,
@@ -744,6 +810,9 @@ pub unsafe extern "C" fn ts_node_descendant_for_byte_range(
 ) -> TSNode {
     ts_node__descendant_for_byte_range(self_0, start, end, true)
 }
+
+/// Get the smallest named node within this node that spans the given range of
+/// bytes
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_descendant_for_byte_range(
     mut self_0: TSNode,
@@ -752,6 +821,9 @@ pub unsafe extern "C" fn ts_node_named_descendant_for_byte_range(
 ) -> TSNode {
     ts_node__descendant_for_byte_range(self_0, start, end, false)
 }
+
+/// Get the smallest node within this node that spans the given range
+/// (row, column) positions.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_descendant_for_point_range(
     mut self_0: TSNode,
@@ -760,6 +832,9 @@ pub unsafe extern "C" fn ts_node_descendant_for_point_range(
 ) -> TSNode {
     ts_node__descendant_for_point_range(self_0, start, end, true)
 }
+
+/// Get the smallest named node within this node that spans the given range of
+/// (row, column) positions.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_named_descendant_for_point_range(
     mut self_0: TSNode,
@@ -769,6 +844,13 @@ pub unsafe extern "C" fn ts_node_named_descendant_for_point_range(
     ts_node__descendant_for_point_range(self_0, start, end, false)
 }
 
+/// Edit the node to keep it in-sync with source code that has been edited.
+///
+/// This function is only rarely needed. When you edit a syntax tree with the
+/// `ts_tree_edit` function, all of the nodes that you retrieve from the tree
+/// afterward will already reflect the edit. You only need to use `ts_node_edit`
+/// when you have a `TSNode` instance that you want to keep and continue to use
+/// after an edit.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_edit(mut self_0: *mut TSNode, mut edit: *const TSInputEdit) {
     let mut start_byte: u32 = ts_node_start_byte(*self_0);
