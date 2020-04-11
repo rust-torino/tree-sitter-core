@@ -6,7 +6,7 @@ use crate::{
 };
 use once_cell::sync::OnceCell;
 use rayon::prelude::*;
-use std::{fs, path::PathBuf};
+use std::{borrow::Cow, env, fs, path::PathBuf};
 use walkdir::WalkDir;
 
 static CELL: OnceCell<Result<(), Error>> = OnceCell::new();
@@ -52,6 +52,14 @@ impl Grammar {
 
 pub fn prepare() -> Result<(), &'static Error> {
     CELL.get_or_init(|| {
+        if env::var("PREPARE_FIXTURES")
+            .map(Cow::Owned)
+            .unwrap_or(Cow::Borrowed("1"))
+            == "0"
+        {
+            return Ok(());
+        }
+
         const GRAMMAR_BASE_URL: &str = "https://github.com/tree-sitter/tree-sitter-";
 
         fs::create_dir_all(&*GRAMMARS_DIR)?;
