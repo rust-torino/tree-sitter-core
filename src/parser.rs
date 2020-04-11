@@ -2700,7 +2700,7 @@ pub unsafe extern "C" fn ts_parser_set_timeout_micros(
 /// and they must not overlap. That is, the following must hold for all
 /// `i` < `length - 1`:
 ///
-///     ranges[i].end_byte <= ranges[i + 1].start_byte
+///   ranges[i].end_byte <= ranges[i + 1].start_byte
 ///
 /// If this requirement is not satisfied, the operation will fail, the ranges
 /// will not be assigned, and this function will return `false`. On success,
