@@ -321,21 +321,31 @@ impl Loader {
                 .target(&BUILD_TARGET)
                 .host(&BUILD_TARGET);
             let compiler = config.get_compiler();
+            println!("Is like {}", compiler.is_like_msvc());
+            println!("Compiler path {}", compiler.path().to_str().unwrap());
             let mut command = Command::new(compiler.path());
             for (key, value) in compiler.env() {
+                println!("{:?} {:?}", key, value);
                 command.env(key, value);
             }
-
+            println!("Parser path {}", parser_path.to_str().unwrap());
+            println!("Header path {}", header_path.to_str().unwrap());
+            println!(
+                "Scanner path {}",
+                scanner_path.as_ref().unwrap().to_str().unwrap()
+            );
             if cfg!(windows) {
-                command.args(&["/nologo", "/LD", "/I"]).arg(header_path);
-                //.arg("/Od")
-                //.arg(parser_path);
+                command
+                    .args(&["/nologo", "/LD", "/I"])
+                    .arg(header_path)
+                    .arg("/Od")
+                    .arg(parser_path);
                 if let Some(scanner_path) = scanner_path.as_ref() {
                     command.arg(scanner_path);
                 }
-            //command
-            //.arg("/link")
-            //.arg(format!("/out:{}", library_path.to_str().unwrap()));
+                command
+                    .arg("/link")
+                    .arg(format!("/out:{}", library_path.to_str().unwrap()));
             } else {
                 command
                     .arg("-shared")
