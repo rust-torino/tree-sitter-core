@@ -312,6 +312,18 @@ jobs:
         tar xzf "$SCCACHE_FILE.tar.gz"
         echo "::add-path::$Env:GITHUB_WORKSPACE/$SCCACHE_FILE"
 
+    - name: Set environment variables
+      run: |
+        $VsPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+        echo "::add-path::$VsPath"
+
+    - name: Set MSVC x86_64 linker path
+      run: |
+        $LinkGlob = "VC\Tools\MSVC\*\bin\Hostx64\x64"
+        $LinkPath = vswhere -latest -products * -find "$LinkGlob" |
+                    Select-Object -Last 1
+        echo "::add-path::$LinkPath"
+
     - name: Install stable
       uses: actions-rs/toolchain@v1
       with:
