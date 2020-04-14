@@ -4,9 +4,9 @@ use std::{ffi, os, ptr};
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct NodeChildIterator {
+pub struct NodeChildIterator<'lang> {
     pub parent: Subtree,
-    pub tree: *const TSTree,
+    pub tree: *const TSTree<'lang>,
     pub position: Length,
     pub child_index: u32,
     pub structural_child_index: u32,
@@ -33,7 +33,7 @@ pub(crate) unsafe extern "C" fn ts_node_new(
     }
 }
 #[inline]
-unsafe extern "C" fn ts_node__null() -> TSNode {
+unsafe extern "C" fn ts_node__null() -> TSNode<'static> {
     ts_node_new(
         std::ptr::null::<TSTree>(),
         std::ptr::null::<Subtree>(),
@@ -102,9 +102,9 @@ unsafe extern "C" fn ts_node_child_iterator_done(mut self_0: *mut NodeChildItera
     (*self_0).child_index == (*(*self_0).parent.ptr).child_count
 }
 #[inline]
-unsafe extern "C" fn ts_node_child_iterator_next(
-    mut self_0: *mut NodeChildIterator,
-    mut result: *mut TSNode,
+unsafe extern "C" fn ts_node_child_iterator_next<'lang>(
+    mut self_0: *mut NodeChildIterator<'lang>,
+    mut result: *mut TSNode<'lang>,
 ) -> bool {
     if (*self_0).parent.ptr.is_null() || ts_node_child_iterator_done(self_0) as os::raw::c_int != 0
     {
@@ -188,7 +188,7 @@ unsafe extern "C" fn ts_node__child(
             if ts_node__is_relevant(child, include_anonymous) {
                 if index == child_index {
                     if ts_node__is_relevant(self_0, true) {
-                        ts_tree_set_cached_parent(self_0.tree, &child, &self_0);
+                        ts_tree_set_cached_parent(&*self_0.tree, &child, &self_0);
                     }
                     return child;
                 }
@@ -427,7 +427,7 @@ unsafe extern "C" fn ts_node__descendant_for_byte_range(
             }
             node = child;
             if ts_node__is_relevant(node, include_anonymous) {
-                ts_tree_set_cached_parent(self_0.tree, &child, &last_visible_node);
+                ts_tree_set_cached_parent(&*self_0.tree, &child, &last_visible_node);
                 last_visible_node = node
             }
             did_descend = true;
@@ -471,7 +471,7 @@ unsafe extern "C" fn ts_node__descendant_for_point_range(
             }
             node = child;
             if ts_node__is_relevant(node, include_anonymous) {
-                ts_tree_set_cached_parent(self_0.tree, &child, &last_visible_node);
+                ts_tree_set_cached_parent(&*self_0.tree, &child, &last_visible_node);
                 last_visible_node = node
             }
             did_descend = true;
@@ -581,11 +581,11 @@ pub unsafe extern "C" fn ts_node_has_error(mut self_0: TSNode) -> bool {
 /// Get the node's immediate parent.
 #[no_mangle]
 pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
-    let mut node: TSNode = ts_tree_get_cached_parent(self_0.tree, &self_0);
+    let mut node: TSNode = ts_tree_get_cached_parent(&*self_0.tree, &self_0);
     if !node.id.is_null() {
         return node;
     }
-    node = ts_tree_root_node(self_0.tree);
+    node = ts_tree_root_node(&*self_0.tree);
     let mut end_byte: u32 = ts_node_end_byte(self_0);
     if node.id == self_0.id {
         return ts_node__null();
@@ -609,7 +609,7 @@ pub unsafe extern "C" fn ts_node_parent(mut self_0: TSNode) -> TSNode {
             }
             node = child;
             if ts_node__is_relevant(child, true) {
-                ts_tree_set_cached_parent(self_0.tree, &node, &last_visible_node);
+                ts_tree_set_cached_parent(&*self_0.tree, &node, &last_visible_node);
                 last_visible_node = node
             }
             did_descend = true;

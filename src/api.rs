@@ -88,8 +88,8 @@ pub type IteratorComparison = os::raw::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryCapture {
-    pub node: TSNode,
+pub struct TSQueryCapture<'lang> {
+    pub node: TSNode<'lang>,
     pub index: u32,
 }
 
@@ -114,17 +114,17 @@ pub struct TSQueryPredicateStep {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryMatch {
+pub struct TSQueryMatch<'lang> {
     pub id: u32,
     pub pattern_index: u16,
     pub capture_count: u16,
-    pub captures: *const TSQueryCapture,
+    pub captures: *const TSQueryCapture<'lang>,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Iterator_0 {
-    pub cursor: TreeCursor,
+pub struct Iterator_0<'lang> {
+    pub cursor: TreeCursor<'lang>,
     pub language: *const TSLanguage,
     pub visible_depth: os::raw::c_uint,
     pub in_padding: bool,
@@ -346,24 +346,13 @@ pub struct TSSymbolMetadata {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSTree {
-    pub root: Subtree,
-    pub language: *const TSLanguage,
-    pub parent_cache: *mut ParentCacheEntry,
-    pub parent_cache_start: u32,
-    pub parent_cache_size: u32,
-    pub included_ranges: *mut TSRange,
-    pub included_range_count: os::raw::c_uint,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct TSRange {
     pub start_point: TSPoint,
     pub end_point: TSPoint,
     pub start_byte: u32,
     pub end_byte: u32,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct TSPoint {
     pub row: u32,
@@ -377,7 +366,19 @@ pub struct ParentCacheEntry {
     pub position: Length,
     pub alias_symbol: TSSymbol,
 }
-#[derive(Copy, Clone)]
+
+impl Default for ParentCacheEntry {
+    fn default() -> Self {
+        Self {
+            child: ptr::null(),
+            parent: ptr::null(),
+            position: Length::default(),
+            alias_symbol: TSSymbol::default(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct Length {
     pub bytes: u32,
@@ -484,10 +485,10 @@ pub struct TSInputEdit {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSNode {
+pub struct TSNode<'lang> {
     pub context: [u32; 4],
     pub id: *const ffi::c_void,
-    pub tree: *const TSTree,
+    pub tree: *const TSTree<'lang>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -540,8 +541,8 @@ pub struct TSRangeArray {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSTreeCursor {
-    pub tree: *const ffi::c_void,
+pub struct TSTreeCursor<'lang> {
+    pub tree: *const TSTree<'lang>,
     pub id: *const ffi::c_void,
     pub context: [u32; 2],
 }

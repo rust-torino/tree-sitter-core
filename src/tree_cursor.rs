@@ -12,16 +12,16 @@ pub struct TreeCursorEntryArray {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TreeCursor {
-    pub tree: *const TSTree,
+pub struct TreeCursor<'lang> {
+    pub tree: *const TSTree<'lang>,
     pub stack: TreeCursorEntryArray,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct CursorChildIterator {
+pub struct CursorChildIterator<'lang> {
     pub parent: Subtree,
-    pub tree: *const TSTree,
+    pub tree: *const TSTree<'lang>,
     pub position: Length,
     pub child_index: u32,
     pub structural_child_index: u32,
@@ -140,7 +140,10 @@ pub unsafe extern "C" fn ts_tree_cursor_reset(mut _self: *mut TSTreeCursor, mut 
     ts_tree_cursor_init(_self as *mut TreeCursor, node);
 }
 #[no_mangle]
-pub(crate) unsafe extern "C" fn ts_tree_cursor_init(mut self_0: *mut TreeCursor, mut node: TSNode) {
+pub(crate) unsafe extern "C" fn ts_tree_cursor_init<'lang>(
+    mut self_0: *mut TreeCursor<'lang>,
+    mut node: TSNode<'lang>,
+) {
     (*self_0).tree = node.tree;
     (*self_0).stack.size = 0 as os::raw::c_int as u32;
     array__grow(
@@ -398,7 +401,9 @@ pub unsafe extern "C" fn ts_tree_cursor_goto_parent(mut _self: *mut TSTreeCursor
 
 /// Get the tree cursor's current node.
 #[no_mangle]
-pub unsafe extern "C" fn ts_tree_cursor_current_node(mut _self: *const TSTreeCursor) -> TSNode {
+pub unsafe extern "C" fn ts_tree_cursor_current_node<'lang>(
+    mut _self: *const TSTreeCursor<'lang>,
+) -> TSNode<'lang> {
     let mut self_0: *const TreeCursor = _self as *const TreeCursor;
     assert!(
         (*self_0)

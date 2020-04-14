@@ -4,6 +4,7 @@ use crate::{
 };
 
 use std::{
+    convert::TryInto,
     ffi::{self, CStr},
     io::Write,
     os, ptr,
@@ -2837,8 +2838,8 @@ pub unsafe extern "C" fn ts_parser_parse(
         ts_subtree_retain((*old_tree).root);
         (*self_0).old_tree = (*old_tree).root;
         ts_range_array_get_changed_ranges(
-            (*old_tree).included_ranges,
-            (*old_tree).included_range_count,
+            (*old_tree).included_ranges.as_ptr(),
+            (*old_tree).included_ranges.len().try_into().unwrap(),
             (*self_0).lexer.included_ranges,
             (*self_0).lexer.included_range_count as os::raw::c_uint,
             &mut (*self_0).included_range_differences,
@@ -2977,12 +2978,15 @@ pub unsafe extern "C" fn ts_parser_parse(
         ts_subtree_print_dot_graph((*self_0).finished_tree, (*self_0).language, dot_graph_file);
         writeln!(dot_graph_file).unwrap();
     }
-    let mut result: *mut TSTree = ts_tree_new(
+    let result = ts_tree_new(
         (*self_0).finished_tree,
-        (*self_0).language,
-        (*self_0).lexer.included_ranges,
-        (*self_0).lexer.included_range_count as os::raw::c_uint,
+        &*(*self_0).language,
+        std::slice::from_raw_parts(
+            (*self_0).lexer.included_ranges,
+            (*self_0).lexer.included_range_count,
+        ),
     );
+    let result = Box::into_raw(result);
     (*self_0).finished_tree = Subtree {
         ptr: std::ptr::null::<SubtreeHeapData>(),
     };

@@ -18,14 +18,14 @@ static mut MAX_STATE_COUNT: u16 = 32 as os::raw::c_int as u16;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct CaptureListPool {
-    pub list: TSQueryCaptureArray,
+pub struct CaptureListPool<'lang> {
+    pub list: TSQueryCaptureArray<'lang>,
     pub usage_map: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryCaptureArray {
-    pub contents: *mut TSQueryCapture,
+pub struct TSQueryCaptureArray<'lang> {
+    pub contents: *mut TSQueryCapture<'lang>,
     pub size: u32,
     pub capacity: u32,
 }
@@ -35,12 +35,12 @@ pub struct TSQueryCaptureArray {
  */
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryCursor {
+pub struct TSQueryCursor<'lang> {
     pub query: *const TSQuery,
-    pub cursor: TSTreeCursor,
+    pub cursor: TSTreeCursor<'lang>,
     pub states: TSQueryCursorStates,
     pub finished_states: TsQueryCursorFinishedStated,
-    pub capture_list_pool: CaptureListPool,
+    pub capture_list_pool: CaptureListPool<'lang>,
     pub depth: u32,
     pub start_byte: u32,
     pub end_byte: u32,
@@ -273,7 +273,7 @@ unsafe extern "C" fn stream_scan_identifier(mut stream: *mut Stream) {
 /* *****************
  * CaptureListPool
  ******************/
-unsafe extern "C" fn capture_list_pool_new() -> CaptureListPool {
+unsafe extern "C" fn capture_list_pool_new() -> CaptureListPool<'static> {
     CaptureListPool {
         list: TSQueryCaptureArray {
             contents: std::ptr::null_mut::<TSQueryCapture>(),
@@ -1469,7 +1469,7 @@ pub unsafe extern "C" fn ts_query_disable_pattern(
 ///  You can then start executing another query on another node by calling
 ///  `ts_query_cursor_exec` again.
 #[no_mangle]
-pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
+pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor<'static> {
     let mut self_0: *mut TSQueryCursor =
         ts_malloc(::std::mem::size_of::<TSQueryCursor>()) as *mut TSQueryCursor;
     *self_0 = TSQueryCursor {
@@ -2001,9 +2001,9 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
 /// If there is a match, write it to `*match` and return `true`.
 /// Otherwise, return `false`.
 #[no_mangle]
-pub unsafe extern "C" fn ts_query_cursor_next_match(
-    mut self_0: *mut TSQueryCursor,
-    mut match_0: *mut TSQueryMatch,
+pub unsafe extern "C" fn ts_query_cursor_next_match<'lang>(
+    mut self_0: *mut TSQueryCursor<'lang>,
+    mut match_0: *mut TSQueryMatch<'lang>,
 ) -> bool {
     if (*self_0).finished_states.size == 0 as os::raw::c_int as os::raw::c_uint
         && !ts_query_cursor__advance(self_0)
@@ -2056,9 +2056,9 @@ pub unsafe extern "C" fn ts_query_cursor_remove_match(
 /// If there is a capture, write its match to `*match` and its index within
 /// the matche's capture list to `*capture_index`. Otherwise, return `false`.
 #[no_mangle]
-pub unsafe extern "C" fn ts_query_cursor_next_capture(
-    mut self_0: *mut TSQueryCursor,
-    mut match_0: *mut TSQueryMatch,
+pub unsafe extern "C" fn ts_query_cursor_next_capture<'lang>(
+    mut self_0: *mut TSQueryCursor<'lang>,
+    mut match_0: *mut TSQueryMatch<'lang>,
     mut capture_index: *mut u32,
 ) -> bool {
     loop {
