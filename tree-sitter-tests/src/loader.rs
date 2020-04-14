@@ -327,17 +327,15 @@ impl Loader {
             }
 
             if cfg!(windows) {
-                command
-                    .args(&["/nologo", "/LD", "/I"])
-                    .arg(header_path)
-                    .arg("/Od")
-                    .arg(parser_path);
+                command.args(&["/nologo", "/LD", "/I"]).arg(header_path);
+                //.arg("/Od")
+                //.arg(parser_path);
                 if let Some(scanner_path) = scanner_path.as_ref() {
                     command.arg(scanner_path);
                 }
-                command
-                    .arg("/link")
-                    .arg(format!("/out:{}", library_path.to_str().unwrap()));
+            //command
+            //.arg("/link")
+            //.arg(format!("/out:{}", library_path.to_str().unwrap()));
             } else {
                 command
                     .arg("-shared")
