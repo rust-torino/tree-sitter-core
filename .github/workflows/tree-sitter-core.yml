@@ -349,11 +349,11 @@ jobs:
 
     - name: Run no-default-features tests
       run: |
-        cargo test --no-default-features --release
+        cargo test --all --no-default-features --release
 
     - name: Run all-features tests
       run: |
-        cargo test --all-features --release
+        cargo test --all --all-features --release
 
     - name: Stop sccache server
       run: |
