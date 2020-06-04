@@ -1088,8 +1088,13 @@ pub(crate) unsafe extern "C" fn ts_stack_record_summary(
         &mut session as *mut SummarizeStackSession as *mut ffi::c_void,
         -(1 as os::raw::c_int),
     );
-    let fresh9 = &mut (*(*self_0).heads.contents.offset(version as isize)).summary;
-    *fresh9 = session.summary;
+    let mut head: *mut StackHead =
+        &mut *(*self_0).heads.contents.offset(version as isize) as *mut StackHead;
+    if !(*head).summary.is_null() {
+        array__delete((*head).summary as *mut VoidArray);
+        ts_free((*head).summary as *mut ffi::c_void);
+    }
+    (*head).summary = session.summary;
 }
 // Retrieve a summary of all the parse states near the top of the
 // given version of the stack.
@@ -1431,6 +1436,9 @@ where
                         , i,
                     ts_stack_node_count_since_error(self_0, i),
                     ts_stack_error_cost(self_0, i)).unwrap();
+            if !(*head).summary.is_null() {
+                write!(f, "\nsummary_size: {}", (*(*head).summary).size).unwrap();
+            }
             if !(*head).last_external_token.ptr.is_null() {
                 let mut state: *const ExternalScannerState = &(*(*head).last_external_token.ptr)
                     .c2rust_unnamed

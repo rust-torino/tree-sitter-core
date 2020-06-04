@@ -2044,276 +2044,296 @@ unsafe extern "C" fn ts_parser__advance(
             &mut table_entry,
         )
     }
-    // Otherwise, re-run the lexer.
-    if lookahead.ptr.is_null() {
-        lookahead = ts_parser__lex(self_0, version, state);
-        if !lookahead.ptr.is_null() {
-            ts_parser__set_cached_token(self_0, position as usize, last_external_token, lookahead);
-            ts_language_table_entry(
-                (*self_0).language,
-                state,
-                ts_subtree_symbol(lookahead),
-                &mut table_entry,
-            );
-        } else {
-            // When parsing a non-terminal extra, a null lookahead indicates the
-            // end of the rule. The reduction is stored in the EOF table entry.
-            // After the reduction, the lexer needs to be run again.
-            ts_language_table_entry(
-                (*self_0).language,
-                state,
-                0 as os::raw::c_int as TSSymbol,
-                &mut table_entry,
-            );
-        }
-    }
     loop {
-        // If a cancellation flag or a timeout was provided, then check every
-        // time a fixed number of parse actions has been processed.
-        (*self_0).operation_count = (*self_0).operation_count.wrapping_add(1);
-        if (*self_0).operation_count == OP_COUNT_PER_TIMEOUT_CHECK {
-            (*self_0).operation_count = 0 as os::raw::c_int as os::raw::c_uint
+        // Otherwise, re-run the lexer.
+        if lookahead.ptr.is_null() {
+            lookahead = ts_parser__lex(self_0, version, state);
+            if !lookahead.ptr.is_null() {
+                ts_parser__set_cached_token(
+                    self_0,
+                    position as usize,
+                    last_external_token,
+                    lookahead,
+                );
+                ts_language_table_entry(
+                    (*self_0).language,
+                    state,
+                    ts_subtree_symbol(lookahead),
+                    &mut table_entry,
+                );
+            } else {
+                // When parsing a non-terminal extra, a null lookahead indicates the
+                // end of the rule. The reduction is stored in the EOF table entry.
+                // After the reduction, the lexer needs to be run again.
+                ts_language_table_entry(
+                    (*self_0).language,
+                    state,
+                    0 as os::raw::c_int as TSSymbol,
+                    &mut table_entry,
+                );
+            }
         }
-        if (*self_0).operation_count == 0 as os::raw::c_int as os::raw::c_uint
-            && (!(*self_0).cancellation_flag.is_null()
-                && atomic_load((*self_0).cancellation_flag) != 0
-                || (*self_0)
-                    .end_instant
-                    .as_ref()
-                    .map(|end_instant| &Instant::now() > end_instant)
-                    .unwrap_or(false))
-        {
-            ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
-            return false;
-        }
-        // Process each parse action for the current lookahead token in
-        // the current state. If there are multiple actions, then this is
-        // an ambiguous state. REDUCE actions always create a new stack
-        // version, whereas SHIFT actions update the existing stack version
-        // and terminate this loop.
-        let mut last_reduction_version: StackVersion = -(1 as os::raw::c_int) as StackVersion;
-        let mut current_block_67: u64;
-        let mut i: u32 = 0 as os::raw::c_int as u32;
-        while i < table_entry.action_count {
-            let mut action: TSParseAction = *table_entry.actions.offset(i as isize);
-            match action.type_0() as os::raw::c_int {
-                0 => {
-                    if !action.params.shift.repetition() {
-                        let mut next_state: TSStateId = 0;
-                        if action.params.shift.extra() {
-                            // TODO: remove when TREE_SITTER_LANGUAGE_VERSION 9 is out.
-                            if state as os::raw::c_int == 0 as os::raw::c_int {
-                                current_block_67 = 15_125_582_407_903_384_992;
+        loop {
+            // If a cancellation flag or a timeout was provided, then check every
+            // time a fixed number of parse actions has been processed.
+            (*self_0).operation_count = (*self_0).operation_count.wrapping_add(1);
+            if (*self_0).operation_count == OP_COUNT_PER_TIMEOUT_CHECK {
+                (*self_0).operation_count = 0 as os::raw::c_int as os::raw::c_uint
+            }
+            if (*self_0).operation_count == 0 as os::raw::c_int as os::raw::c_uint
+                && (!(*self_0).cancellation_flag.is_null()
+                    && atomic_load((*self_0).cancellation_flag) != 0
+                    || (*self_0)
+                        .end_instant
+                        .as_ref()
+                        .map(|end_instant| &Instant::now() > end_instant)
+                        .unwrap_or(false))
+            {
+                ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
+                return false;
+            }
+            // Process each parse action for the current lookahead token in
+            // the current state. If there are multiple actions, then this is
+            // an ambiguous state. REDUCE actions always create a new stack
+            // version, whereas SHIFT actions update the existing stack version
+            // and terminate this loop.
+            let mut last_reduction_version: StackVersion = -(1 as os::raw::c_int) as StackVersion;
+            let mut current_block_67: u64;
+            let mut i: u32 = 0 as os::raw::c_int as u32;
+            while i < table_entry.action_count {
+                let mut action: TSParseAction = *table_entry.actions.offset(i as isize);
+                match action.type_0() as os::raw::c_int {
+                    0 => {
+                        if !action.params.shift.repetition() {
+                            let mut next_state: TSStateId = 0;
+                            if action.params.shift.extra() {
+                                // TODO: remove when TREE_SITTER_LANGUAGE_VERSION 9 is out.
+                                if state as os::raw::c_int == 0 as os::raw::c_int {
+                                    current_block_67 = 15_125_582_407_903_384_992;
+                                } else {
+                                    next_state = state;
+                                    if (*self_0).lexer.logger.log.is_some()
+                                        || (*self_0).dot_graph_file.is_valid()
+                                    {
+                                        snwrite!(
+                                            (*self_0).lexer.debug_buffer.as_mut_ptr(),
+                                            1024,
+                                            "shift_extra",
+                                        )
+                                        .unwrap();
+                                        ts_parser__log(self_0);
+                                    }
+                                    current_block_67 = 6_717_214_610_478_484_138;
+                                }
                             } else {
-                                next_state = state;
+                                next_state = action.params.shift.state;
                                 if (*self_0).lexer.logger.log.is_some()
                                     || (*self_0).dot_graph_file.is_valid()
                                 {
                                     snwrite!(
                                         (*self_0).lexer.debug_buffer.as_mut_ptr(),
                                         1024,
-                                        "shift_extra",
+                                        "shift state:{}",
+                                        next_state as os::raw::c_int,
                                     )
                                     .unwrap();
                                     ts_parser__log(self_0);
                                 }
                                 current_block_67 = 6_717_214_610_478_484_138;
                             }
-                        } else {
-                            next_state = action.params.shift.state;
-                            if (*self_0).lexer.logger.log.is_some()
-                                || (*self_0).dot_graph_file.is_valid()
-                            {
-                                snwrite!(
-                                    (*self_0).lexer.debug_buffer.as_mut_ptr(),
-                                    1024,
-                                    "shift state:{}",
-                                    next_state as os::raw::c_int,
-                                )
-                                .unwrap();
-                                ts_parser__log(self_0);
-                            }
-                            current_block_67 = 6_717_214_610_478_484_138;
-                        }
-                        match current_block_67 {
-                            15_125_582_407_903_384_992 => {}
-                            _ => {
-                                if ts_subtree_child_count(lookahead)
-                                    > 0 as os::raw::c_int as os::raw::c_uint
-                                {
-                                    ts_parser__breakdown_lookahead(
+                            match current_block_67 {
+                                15_125_582_407_903_384_992 => {}
+                                _ => {
+                                    if ts_subtree_child_count(lookahead)
+                                        > 0 as os::raw::c_int as os::raw::c_uint
+                                    {
+                                        ts_parser__breakdown_lookahead(
+                                            self_0,
+                                            &mut lookahead,
+                                            state,
+                                            &mut (*self_0).reusable_node,
+                                        );
+                                        next_state = ts_language_next_state(
+                                            (*self_0).language,
+                                            state,
+                                            ts_subtree_symbol(lookahead),
+                                        )
+                                    }
+                                    ts_parser__shift(
                                         self_0,
-                                        &mut lookahead,
-                                        state,
-                                        &mut (*self_0).reusable_node,
+                                        version,
+                                        next_state,
+                                        lookahead,
+                                        action.params.shift.extra(),
                                     );
-                                    next_state = ts_language_next_state(
-                                        (*self_0).language,
-                                        state,
-                                        ts_subtree_symbol(lookahead),
-                                    )
+                                    if did_reuse {
+                                        reusable_node_advance(&mut (*self_0).reusable_node);
+                                    }
+                                    return true;
                                 }
-                                ts_parser__shift(
-                                    self_0,
-                                    version,
-                                    next_state,
-                                    lookahead,
-                                    action.params.shift.extra(),
-                                );
-                                if did_reuse {
-                                    reusable_node_advance(&mut (*self_0).reusable_node);
-                                }
-                                return true;
                             }
                         }
                     }
-                }
-                1 => {
-                    let mut is_fragile: bool =
-                        table_entry.action_count > 1 as os::raw::c_int as os::raw::c_uint;
-                    let mut is_extra: bool = lookahead.ptr.is_null();
-                    if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
-                        snwrite!(
-                            (*self_0).lexer.debug_buffer.as_mut_ptr(),
-                            1024,
-                            "reduce sym:{}, child_count:{}",
-                            CStr::from_ptr(ts_language_symbol_name(
-                                (*self_0).language,
-                                action.params.reduce.symbol,
-                            ))
-                            .to_string_lossy(),
-                            action.params.reduce.child_count as os::raw::c_int,
-                        )
-                        .unwrap();
-                        ts_parser__log(self_0);
-                    }
-                    let mut reduction_version: StackVersion = ts_parser__reduce(
-                        self_0,
-                        version,
-                        action.params.reduce.symbol,
-                        action.params.reduce.child_count as u32,
-                        action.params.reduce.dynamic_precedence as os::raw::c_int,
-                        action.params.reduce.production_id as u16,
-                        is_fragile,
-                        is_extra,
-                    );
-                    if reduction_version != -(1 as os::raw::c_int) as StackVersion {
-                        last_reduction_version = reduction_version
-                    }
-                }
-                2 => {
-                    if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
-                        snwrite!((*self_0).lexer.debug_buffer.as_mut_ptr(), 1024, "accept",)
+                    1 => {
+                        let mut is_fragile: bool =
+                            table_entry.action_count > 1 as os::raw::c_int as os::raw::c_uint;
+                        let mut is_extra: bool = lookahead.ptr.is_null();
+                        if (*self_0).lexer.logger.log.is_some()
+                            || (*self_0).dot_graph_file.is_valid()
+                        {
+                            snwrite!(
+                                (*self_0).lexer.debug_buffer.as_mut_ptr(),
+                                1024,
+                                "reduce sym:{}, child_count:{}",
+                                CStr::from_ptr(ts_language_symbol_name(
+                                    (*self_0).language,
+                                    action.params.reduce.symbol,
+                                ))
+                                .to_string_lossy(),
+                                action.params.reduce.child_count as os::raw::c_int,
+                            )
                             .unwrap();
-                        ts_parser__log(self_0);
-                    }
-                    ts_parser__accept(self_0, version, lookahead);
-                    return true;
-                }
-                3 => {
-                    if ts_subtree_child_count(lookahead) > 0 as os::raw::c_int as os::raw::c_uint {
-                        ts_parser__breakdown_lookahead(
+                            ts_parser__log(self_0);
+                        }
+                        let mut reduction_version: StackVersion = ts_parser__reduce(
                             self_0,
-                            &mut lookahead,
-                            0 as os::raw::c_int as TSStateId,
-                            &mut (*self_0).reusable_node,
+                            version,
+                            action.params.reduce.symbol,
+                            action.params.reduce.child_count as u32,
+                            action.params.reduce.dynamic_precedence as os::raw::c_int,
+                            action.params.reduce.production_id as u16,
+                            is_fragile,
+                            is_extra,
                         );
+                        if reduction_version != -(1 as os::raw::c_int) as StackVersion {
+                            last_reduction_version = reduction_version
+                        }
                     }
-                    ts_parser__recover(self_0, version, lookahead);
-                    if did_reuse {
-                        reusable_node_advance(&mut (*self_0).reusable_node);
+                    2 => {
+                        if (*self_0).lexer.logger.log.is_some()
+                            || (*self_0).dot_graph_file.is_valid()
+                        {
+                            snwrite!((*self_0).lexer.debug_buffer.as_mut_ptr(), 1024, "accept",)
+                                .unwrap();
+                            ts_parser__log(self_0);
+                        }
+                        ts_parser__accept(self_0, version, lookahead);
+                        return true;
                     }
-                    return true;
+                    3 => {
+                        if ts_subtree_child_count(lookahead)
+                            > 0 as os::raw::c_int as os::raw::c_uint
+                        {
+                            ts_parser__breakdown_lookahead(
+                                self_0,
+                                &mut lookahead,
+                                0 as os::raw::c_int as TSStateId,
+                                &mut (*self_0).reusable_node,
+                            );
+                        }
+                        ts_parser__recover(self_0, version, lookahead);
+                        if did_reuse {
+                            reusable_node_advance(&mut (*self_0).reusable_node);
+                        }
+                        return true;
+                    }
+                    _ => {}
                 }
-                _ => {}
+                i = i.wrapping_add(1)
             }
-            i = i.wrapping_add(1)
-        }
-        // If a reduction was performed, then replace the current stack version
-        // with one of the stack versions created by a reduction, and continue
-        // processing this version of the stack with the same lookahead symbol.
-        if last_reduction_version != -(1 as os::raw::c_int) as StackVersion {
-            ts_stack_renumber_version((*self_0).stack, last_reduction_version, version);
-            if (*self_0).dot_graph_file.is_valid() {
-                let dot_graph_file = &mut (*self_0).dot_graph_file;
-                ts_stack_print_dot_graph((*self_0).stack, (*self_0).language, dot_graph_file);
-                write!(dot_graph_file, "\n\n").unwrap();
-            }
-            state = ts_stack_state((*self_0).stack, version);
-            // At the end of a non-terminal extra rule, the lexer will return a
-            // null subtree, because the parser needs to perform a fixed reduction
-            // regardless of the lookahead node. After performing that reduction,
-            // (and completing the non-terminal extra rule) run the lexer again based
-            // on the current parse state.
-            if lookahead.ptr.is_null() {
-                lookahead = ts_parser__lex(self_0, version, state)
-            }
-            ts_language_table_entry(
-                (*self_0).language,
-                state,
-                ts_subtree_leaf_symbol(lookahead),
-                &mut table_entry,
-            );
-        } else {
-            // If there were no parse actions for the current lookahead token, then
-            // it is not valid in this state. If the current lookahead token is a
-            // keyword, then switch to treating it as the normal word token if that
-            // token is valid in this state.
-            if ts_subtree_is_keyword(lookahead) as os::raw::c_int != 0
-                && ts_subtree_symbol(lookahead) as os::raw::c_int
-                    != (*(*self_0).language).keyword_capture_token as os::raw::c_int
-            {
+            // If a reduction was performed, then replace the current stack version
+            // with one of the stack versions created by a reduction, and continue
+            // processing this version of the stack with the same lookahead symbol.
+            if last_reduction_version != -(1 as os::raw::c_int) as StackVersion {
+                ts_stack_renumber_version((*self_0).stack, last_reduction_version, version);
+                if (*self_0).dot_graph_file.is_valid() {
+                    let dot_graph_file = &mut (*self_0).dot_graph_file;
+                    ts_stack_print_dot_graph((*self_0).stack, (*self_0).language, dot_graph_file);
+                    write!(dot_graph_file, "\n\n").unwrap();
+                }
+                state = ts_stack_state((*self_0).stack, version);
+                // At the end of a non-terminal extra rule, the lexer will return a
+                // null subtree, because the parser needs to perform a fixed reduction
+                // regardless of the lookahead node. After performing that reduction,
+                // (and completing the non-terminal extra rule) run the lexer again based
+                // on the current parse state.
+                if lookahead.ptr.is_null() {
+                    lookahead = ts_parser__lex(self_0, version, state)
+                }
                 ts_language_table_entry(
                     (*self_0).language,
                     state,
-                    (*(*self_0).language).keyword_capture_token,
+                    ts_subtree_leaf_symbol(lookahead),
                     &mut table_entry,
                 );
-                if table_entry.action_count > 0 as os::raw::c_int as os::raw::c_uint {
-                    if (*self_0).lexer.logger.log.is_some() || (*self_0).dot_graph_file.is_valid() {
-                        snwrite!(
-                            (*self_0).lexer.debug_buffer.as_mut_ptr(),
-                            1024,
-                            "switch from_keyword:{}, to_word_token:{}",
-                            CStr::from_ptr(ts_language_symbol_name(
-                                (*self_0).language,
-                                ts_subtree_symbol(lookahead),
-                            ))
-                            .to_string_lossy(),
-                            CStr::from_ptr(ts_language_symbol_name(
-                                (*self_0).language,
-                                (*(*self_0).language).keyword_capture_token,
-                            ))
-                            .to_string_lossy(),
-                        )
-                        .unwrap();
-                        ts_parser__log(self_0);
-                    }
-                    let mut mutable_lookahead: MutableSubtree =
-                        ts_subtree_make_mut(&mut (*self_0).tree_pool, lookahead);
-                    ts_subtree_set_symbol(
-                        &mut mutable_lookahead,
-                        (*(*self_0).language).keyword_capture_token,
+            } else {
+                // If there were no parse actions for the current lookahead token, then
+                // it is not valid in this state. If the current lookahead token is a
+                // keyword, then switch to treating it as the normal word token if that
+                // token is valid in this state.
+                if ts_subtree_is_keyword(lookahead) as os::raw::c_int != 0
+                    && ts_subtree_symbol(lookahead) as os::raw::c_int
+                        != (*(*self_0).language).keyword_capture_token as os::raw::c_int
+                {
+                    ts_language_table_entry(
                         (*self_0).language,
+                        state,
+                        (*(*self_0).language).keyword_capture_token,
+                        &mut table_entry,
                     );
-                    lookahead = ts_subtree_from_mut(mutable_lookahead);
-                    continue;
+                    if table_entry.action_count > 0 as os::raw::c_int as os::raw::c_uint {
+                        if (*self_0).lexer.logger.log.is_some()
+                            || (*self_0).dot_graph_file.is_valid()
+                        {
+                            snwrite!(
+                                (*self_0).lexer.debug_buffer.as_mut_ptr(),
+                                1024,
+                                "switch from_keyword:{}, to_word_token:{}",
+                                CStr::from_ptr(ts_language_symbol_name(
+                                    (*self_0).language,
+                                    ts_subtree_symbol(lookahead),
+                                ))
+                                .to_string_lossy(),
+                                CStr::from_ptr(ts_language_symbol_name(
+                                    (*self_0).language,
+                                    (*(*self_0).language).keyword_capture_token,
+                                ))
+                                .to_string_lossy(),
+                            )
+                            .unwrap();
+                            ts_parser__log(self_0);
+                        }
+                        let mut mutable_lookahead: MutableSubtree =
+                            ts_subtree_make_mut(&mut (*self_0).tree_pool, lookahead);
+                        ts_subtree_set_symbol(
+                            &mut mutable_lookahead,
+                            (*(*self_0).language).keyword_capture_token,
+                            (*self_0).language,
+                        );
+                        lookahead = ts_subtree_from_mut(mutable_lookahead);
+                        continue;
+                    }
                 }
-            }
-            // If the current lookahead token is not valid and the parser is
-            // already in the error state, restart the error recovery process.
-            // TODO - can this be unified with the other `RECOVER` case above?
-            if state as os::raw::c_int == 0 as os::raw::c_int {
-                ts_parser__recover(self_0, version, lookahead);
-                return true;
-            }
-            // If the current lookahead token is not valid and the previous
-            // subtree on the stack was reused from an old tree, it isn't actually
-            // valid to reuse it. Remove it from the stack, and in its place,
-            // push each of its children. Then try again to process the current
-            // lookahead.
-            if ts_parser__breakdown_top_of_stack(self_0, version) {
-                continue;
+                // If the current lookahead token is not valid and the parser is
+                // already in the error state, restart the error recovery process.
+                // TODO - can this be unified with the other `RECOVER` case above?
+                if state as os::raw::c_int == 0 as os::raw::c_int {
+                    ts_parser__recover(self_0, version, lookahead);
+                    return true;
+                }
+                // If the current lookahead token is not valid and the previous
+                // subtree on the stack was reused from an old tree, it isn't actually
+                // valid to reuse it. Remove it from the stack, and in its place,
+                // push each of its children. Then try again to process the current
+                // lookahead.
+                if !ts_parser__breakdown_top_of_stack(self_0, version) {
+                    break;
+                }
+                state = ts_stack_state((*self_0).stack, version);
+                ts_subtree_release(&mut (*self_0).tree_pool, lookahead);
+                lookahead = Subtree {
+                    ptr: 0 as *const SubtreeHeapData,
+                }
             }
             // At this point, the current lookahead token is definitely not valid
             // for this parse stack version. Mark this version as paused and continue
