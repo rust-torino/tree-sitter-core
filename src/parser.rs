@@ -1425,27 +1425,22 @@ unsafe extern "C" fn ts_parser__do_all_potential_reductions(
                     let mut action: TSParseAction = *entry.actions.offset(i_1 as isize);
                     match action.type_0() as os::raw::c_int {
                         0 | 3 => {
-                            if !action.params.c2rust_unnamed.extra()
-                                && !action.params.c2rust_unnamed.repetition()
-                            {
+                            if !action.params.shift.extra() && !action.params.shift.repetition() {
                                 has_shift_action = true
                             }
                         }
                         1 => {
-                            if action.params.c2rust_unnamed_0.child_count as os::raw::c_int
+                            if action.params.reduce.child_count as os::raw::c_int
                                 > 0 as os::raw::c_int
                             {
                                 ts_reduce_action_set_add(
                                     &mut (*self_0).reduce_actions,
                                     ReduceAction {
-                                        count: action.params.c2rust_unnamed_0.child_count as u32,
-                                        symbol: action.params.c2rust_unnamed_0.symbol,
-                                        dynamic_precedence: action
-                                            .params
-                                            .c2rust_unnamed_0
-                                            .dynamic_precedence
+                                        count: action.params.reduce.child_count as u32,
+                                        symbol: action.params.reduce.symbol,
+                                        dynamic_precedence: action.params.reduce.dynamic_precedence
                                             as os::raw::c_int,
-                                        production_id: action.params.c2rust_unnamed_0.production_id
+                                        production_id: action.params.reduce.production_id
                                             as os::raw::c_ushort,
                                     },
                                 );
@@ -1883,7 +1878,7 @@ unsafe extern "C" fn ts_parser__recover(
             == TSParseActionTypeShift as os::raw::c_int
         && (*actions.offset(n.wrapping_sub(1) as isize))
             .params
-            .c2rust_unnamed
+            .shift
             .extra() as os::raw::c_int
             != 0
     {
@@ -2103,9 +2098,9 @@ unsafe extern "C" fn ts_parser__advance(
             let mut action: TSParseAction = *table_entry.actions.offset(i as isize);
             match action.type_0() as os::raw::c_int {
                 0 => {
-                    if !action.params.c2rust_unnamed.repetition() {
+                    if !action.params.shift.repetition() {
                         let mut next_state: TSStateId = 0;
-                        if action.params.c2rust_unnamed.extra() {
+                        if action.params.shift.extra() {
                             // TODO: remove when TREE_SITTER_LANGUAGE_VERSION 9 is out.
                             if state as os::raw::c_int == 0 as os::raw::c_int {
                                 current_block_67 = 15_125_582_407_903_384_992;
@@ -2125,7 +2120,7 @@ unsafe extern "C" fn ts_parser__advance(
                                 current_block_67 = 6_717_214_610_478_484_138;
                             }
                         } else {
-                            next_state = action.params.c2rust_unnamed.state;
+                            next_state = action.params.shift.state;
                             if (*self_0).lexer.logger.log.is_some()
                                 || (*self_0).dot_graph_file.is_valid()
                             {
@@ -2163,7 +2158,7 @@ unsafe extern "C" fn ts_parser__advance(
                                     version,
                                     next_state,
                                     lookahead,
-                                    action.params.c2rust_unnamed.extra(),
+                                    action.params.shift.extra(),
                                 );
                                 if did_reuse {
                                     reusable_node_advance(&mut (*self_0).reusable_node);
@@ -2184,10 +2179,10 @@ unsafe extern "C" fn ts_parser__advance(
                             "reduce sym:{}, child_count:{}",
                             CStr::from_ptr(ts_language_symbol_name(
                                 (*self_0).language,
-                                action.params.c2rust_unnamed_0.symbol,
+                                action.params.reduce.symbol,
                             ))
                             .to_string_lossy(),
-                            action.params.c2rust_unnamed_0.child_count as os::raw::c_int,
+                            action.params.reduce.child_count as os::raw::c_int,
                         )
                         .unwrap();
                         ts_parser__log(self_0);
@@ -2195,10 +2190,10 @@ unsafe extern "C" fn ts_parser__advance(
                     let mut reduction_version: StackVersion = ts_parser__reduce(
                         self_0,
                         version,
-                        action.params.c2rust_unnamed_0.symbol,
-                        action.params.c2rust_unnamed_0.child_count as u32,
-                        action.params.c2rust_unnamed_0.dynamic_precedence as os::raw::c_int,
-                        action.params.c2rust_unnamed_0.production_id as u16,
+                        action.params.reduce.symbol,
+                        action.params.reduce.child_count as u32,
+                        action.params.reduce.dynamic_precedence as os::raw::c_int,
+                        action.params.reduce.production_id as u16,
                         is_fragile,
                         is_extra,
                     );

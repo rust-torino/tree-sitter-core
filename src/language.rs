@@ -46,8 +46,8 @@ pub(crate) unsafe extern "C" fn ts_language_table_entry(
         let mut action_index: u32 = ts_language_lookup(self_0, state, symbol) as u32;
         let mut entry: *const TSParseActionEntry =
             &*(*self_0).parse_actions.offset(action_index as isize) as *const TSParseActionEntry;
-        (*result).action_count = (*entry).c2rust_unnamed.count as u32;
-        (*result).is_reusable = (*entry).c2rust_unnamed.reusable();
+        (*result).action_count = (*entry).entry.count as u32;
+        (*result).is_reusable = (*entry).entry.reusable();
         (*result).actions = entry.offset(1 as os::raw::c_int as isize) as *const TSParseAction
     };
 }

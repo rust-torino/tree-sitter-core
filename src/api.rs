@@ -290,7 +290,7 @@ pub struct TSLexMode {
 #[repr(C)]
 pub union TSParseActionEntry {
     pub action: TSParseAction,
-    pub c2rust_unnamed: TSParseActionEntryContent,
+    pub entry: TSParseActionEntryContent,
 }
 #[derive(Copy, Clone, BitfieldStruct)]
 #[repr(C)]
@@ -316,8 +316,8 @@ pub const TSParseActionTypeShift: TSParseActionType = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union TSParseActionParams {
-    pub c2rust_unnamed: TSParseActionParamsState,
-    pub c2rust_unnamed_0: TSParseActionParamsSymbol,
+    pub shift: TSParseActionParamsState,
+    pub reduce: TSParseActionParamsSymbol,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -1340,10 +1340,10 @@ pub(crate) unsafe extern "C" fn ts_language_next_state(
         if count > 0 as os::raw::c_int as os::raw::c_uint {
             let mut action: TSParseAction = *actions.offset(count.wrapping_sub(1) as isize);
             if action.type_0() as os::raw::c_int == TSParseActionTypeShift as os::raw::c_int {
-                return if action.params.c2rust_unnamed.extra() as os::raw::c_int != 0 {
+                return if action.params.shift.extra() as os::raw::c_int != 0 {
                     state as os::raw::c_int
                 } else {
-                    action.params.c2rust_unnamed.state as os::raw::c_int
+                    action.params.shift.state as os::raw::c_int
                 } as TSStateId;
             }
         }
