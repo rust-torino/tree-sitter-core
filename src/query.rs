@@ -1,53 +1,27 @@
-use crate::{
-    util::{iswalnum, iswspace, strcmp, strncmp, WrappingOffsetFromExt},
-    *,
-};
+use crate::util::*;
+use crate::*;
+use std::os;
+use std::ptr::{copy_nonoverlapping, write_bytes};
 
-use std::{
-    ffi, os,
-    ptr::{self, copy_nonoverlapping, write_bytes},
-};
-
-static mut PARENT_DONE: TSQueryError = 4_294_967_295 as TSQueryError;
-static mut PATTERN_DONE_MARKER: u8 = 255 as os::raw::c_int as u8;
-static mut NONE: u16 = 65535 as os::raw::c_int as u16;
-static mut WILDCARD_SYMBOL: TSSymbol = 0 as os::raw::c_int as TSSymbol;
-static mut NAMED_WILDCARD_SYMBOL: TSSymbol =
-    (65535 as os::raw::c_int - 1 as os::raw::c_int) as TSSymbol;
-static mut MAX_STATE_COUNT: u16 = 32 as os::raw::c_int as u16;
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, BitfieldStruct)]
 #[repr(C)]
-pub struct CaptureListPool {
-    pub list: TSQueryCaptureArray,
-    pub usage_map: u32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct TSQueryCaptureArray {
-    pub contents: *mut TSQueryCapture,
-    pub size: u32,
-    pub capacity: u32,
-}
-
-/*
- * TSQueryCursor - A stateful struct used to execute a query on a tree.
- */
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct TSQueryCursor {
-    pub query: *const TSQuery,
-    pub cursor: TSTreeCursor,
-    pub states: TSQueryCursorStates,
-    pub finished_states: TsQueryCursorFinishedStated,
-    pub capture_list_pool: CaptureListPool,
-    pub depth: u32,
-    pub start_byte: u32,
-    pub end_byte: u32,
-    pub next_state_id: u32,
-    pub start_point: TSPoint,
-    pub end_point: TSPoint,
-    pub ascending: bool,
+pub struct QueryStep {
+    pub symbol: TSSymbol,
+    pub field: TSFieldId,
+    pub capture_ids: [u16; 3],
+    pub alternative_index: u16,
+    pub depth: u16,
+    #[bitfield(name = "contains_captures", ty = "bool", bits = "0..=0")]
+    #[bitfield(name = "is_pattern_start", ty = "bool", bits = "1..=1")]
+    #[bitfield(name = "is_immediate", ty = "bool", bits = "2..=2")]
+    #[bitfield(name = "is_last_child", ty = "bool", bits = "3..=3")]
+    #[bitfield(name = "is_pass_through", ty = "bool", bits = "4..=4")]
+    #[bitfield(name = "is_dead_end", ty = "bool", bits = "5..=5")]
+    #[bitfield(name = "alternative_is_immediate", ty = "bool", bits = "6..=6")]
+    pub contains_captures_is_pattern_start_is_immediate_is_last_child_is_pass_through_is_dead_end_alternative_is_immediate:
+        [u8; 1],
+    #[bitfield(padding)]
+    pub c2rust_padding: [u8; 1],
 }
 
 #[derive(Copy, Clone)]
@@ -59,17 +33,33 @@ pub struct Stream {
     pub next_size: u8,
 }
 
-#[derive(Copy, Clone, BitfieldStruct)]
+#[derive(Copy, Clone)]
 #[repr(C)]
-pub struct QueryStep {
-    pub symbol: TSSymbol,
-    pub field: TSFieldId,
-    pub capture_ids: [u16; 4],
-    #[bitfield(name = "depth", ty = "u16", bits = "0..=12")]
-    #[bitfield(name = "contains_captures", ty = "bool", bits = "13..=13")]
-    #[bitfield(name = "is_immediate", ty = "bool", bits = "14..=14")]
-    #[bitfield(name = "is_last", ty = "bool", bits = "15..=15")]
-    pub depth_contains_captures_is_immediate_is_last: [u8; 2],
+pub struct Slice {
+    pub offset: u32,
+    pub length: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct SymbolTable {
+    pub characters: C2RustUnnamed_10,
+    pub slices: C2RustUnnamed_9,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_7 {
+    pub contents: *mut PatternEntry,
+    pub size: u32,
+    pub capacity: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct PatternEntry {
+    pub step_index: u16,
+    pub pattern_index: u16,
 }
 
 /*
@@ -82,83 +72,41 @@ pub struct QueryStep {
 pub struct TSQuery {
     pub captures: SymbolTable,
     pub predicate_values: SymbolTable,
-    pub steps: TSQuerySteps,
-    pub pattern_map: TSQueryPatternMap,
-    pub predicate_steps: TSQueryPredicateSteps,
-    pub predicates_by_pattern: TSQueryPredicatesByPattern,
-    pub start_bytes_by_pattern: TSQueryStartBytesByPattern,
+    pub steps: C2RustUnnamed_8,
+    pub pattern_map: C2RustUnnamed_7,
+    pub predicate_steps: C2RustUnnamed_6,
+    pub predicates_by_pattern: C2RustUnnamed_5,
+    pub start_bytes_by_pattern: C2RustUnnamed_4,
     pub language: *const TSLanguage,
-    pub max_capture_count: u16,
     pub wildcard_root_pattern_count: u16,
     pub symbol_map: *mut TSSymbol,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryStartBytesByPattern {
+pub struct C2RustUnnamed_4 {
     pub contents: *mut u32,
     pub size: u32,
     pub capacity: u32,
 }
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Slice {
-    pub offset: u32,
-    pub length: u32,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SymbolTable {
-    pub characters: SymbolTableCharacters,
-    pub slices: SymbolTableSlices,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct SymbolTableSlices {
+pub struct C2RustUnnamed_5 {
     pub contents: *mut Slice,
     pub size: u32,
     pub capacity: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SymbolTableCharacters {
-    pub contents: *mut os::raw::c_char,
-    pub size: u32,
-    pub capacity: u32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct TSQueryPredicatesByPattern {
-    pub contents: *mut Slice,
-    pub size: u32,
-    pub capacity: u32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct TSQueryPredicateSteps {
+pub struct C2RustUnnamed_6 {
     pub contents: *mut TSQueryPredicateStep,
     pub size: u32,
     pub capacity: u32,
 }
-
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryPatternMap {
-    pub contents: *mut PatternEntry,
-    pub size: u32,
-    pub capacity: u32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct PatternEntry {
-    pub step_index: u16,
-    pub pattern_index: u16,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct TSQuerySteps {
+pub struct C2RustUnnamed_8 {
     pub contents: *mut QueryStep,
     pub size: u32,
     pub capacity: u32,
@@ -166,29 +114,100 @@ pub struct TSQuerySteps {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TsQueryCursorFinishedStated {
-    pub contents: *mut QueryState,
+pub struct C2RustUnnamed_9 {
+    pub contents: *mut Slice,
     pub size: u32,
     pub capacity: u32,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_10 {
+    pub contents: *mut os::raw::c_char,
+    pub size: u32,
+    pub capacity: u32,
+}
+/*
+ * TSQueryCursor - A stateful struct used to execute a query on a tree.
+ */
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TSQueryCursor {
+    pub query: *const TSQuery,
+    pub cursor: TSTreeCursor,
+    pub states: C2RustUnnamed_12,
+    pub finished_states: C2RustUnnamed_11,
+    pub capture_list_pool: CaptureListPool,
+    pub depth: u32,
+    pub start_byte: u32,
+    pub end_byte: u32,
+    pub next_state_id: u32,
+    pub start_point: TSPoint,
+    pub end_point: TSPoint,
+    pub ascending: bool,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct CaptureListPool {
+    pub list: [CaptureList; 32],
+    pub empty_list: CaptureList,
+    pub usage_map: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct CaptureList {
+    pub contents: *mut TSQueryCapture,
+    pub size: u32,
+    pub capacity: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_11 {
+    pub contents: *mut QueryState,
+    pub size: u32,
+    pub capacity: u32,
+}
+
+#[derive(Copy, Clone, BitfieldStruct)]
 #[repr(C)]
 pub struct QueryState {
-    pub start_depth: u16,
-    pub pattern_index: u16,
-    pub step_index: u16,
-    pub capture_count: u16,
-    pub capture_list_id: u16,
-    pub consumed_capture_count: u16,
     pub id: u32,
+    pub start_depth: u16,
+    pub step_index: u16,
+    pub pattern_index: u16,
+    pub capture_list_id: u16,
+    #[bitfield(name = "consumed_capture_count", ty = "u16", bits = "0..=13")]
+    #[bitfield(name = "seeking_immediate_match", ty = "bool", bits = "14..=14")]
+    #[bitfield(name = "has_in_progress_alternatives", ty = "bool", bits = "15..=15")]
+    pub consumed_capture_count_seeking_immediate_match_has_in_progress_alternatives: [u8; 2],
+    #[bitfield(padding)]
+    pub c2rust_padding: [u8; 2],
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TSQueryCursorStates {
+pub struct C2RustUnnamed_12 {
     pub contents: *mut QueryState,
     pub size: u32,
     pub capacity: u32,
 }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_13 {
+    pub contents: *mut u32,
+    pub size: u32,
+    pub capacity: u32,
+}
+
+static mut PARENT_DONE: TSQueryError = 4294967295 as TSQueryError;
+static mut PATTERN_DONE_MARKER: u16 = 65535 as os::raw::c_int as u16;
+static mut NONE: u16 = 65535 as os::raw::c_int as u16;
+static mut WILDCARD_SYMBOL: TSSymbol = 0 as os::raw::c_int as TSSymbol;
+static mut NAMED_WILDCARD_SYMBOL: TSSymbol =
+    (65535 as os::raw::c_int - 1 as os::raw::c_int) as TSSymbol;
 
 /* *********
  * Stream
@@ -206,13 +225,13 @@ unsafe extern "C" fn stream_advance(mut self_0: *mut Stream) -> bool {
         );
         if size > 0 as os::raw::c_int as os::raw::c_uint {
             (*self_0).next_size = size as u8;
-            return true;
+            return 1 as os::raw::c_int != 0;
         }
     } else {
         (*self_0).next_size = 0 as os::raw::c_int as u8;
         (*self_0).next = '\u{0}' as i32
     }
-    false
+    return 0 as os::raw::c_int != 0;
 }
 // Reset the stream to the given input position, represented as a pointer
 // into the input string.
@@ -222,21 +241,24 @@ unsafe extern "C" fn stream_reset(mut self_0: *mut Stream, mut input: *const os:
     stream_advance(self_0);
 }
 unsafe extern "C" fn stream_new(mut string: *const os::raw::c_char, mut length: u32) -> Stream {
-    let mut self_0 = Stream {
-        input: string,
-        end: string.offset(length as isize),
-        next: 0 as os::raw::c_int,
-        next_size: 0,
+    let mut self_0: Stream = {
+        let mut init = Stream {
+            input: string,
+            end: string.offset(length as isize),
+            next: 0 as os::raw::c_int,
+            next_size: 0,
+        };
+        init
     };
     stream_advance(&mut self_0);
-    self_0
+    return self_0;
 }
 unsafe extern "C" fn stream_skip_whitespace(mut stream: *mut Stream) {
     loop {
         if iswspace((*stream).next as wint_t) != 0 {
             stream_advance(stream);
         } else {
-            if (*stream).next != ';' as i32 {
+            if !((*stream).next == ';' as i32) {
                 break;
             }
             // skip over comments
@@ -251,9 +273,9 @@ unsafe extern "C" fn stream_skip_whitespace(mut stream: *mut Stream) {
     }
 }
 unsafe extern "C" fn stream_is_ident_start(mut stream: *mut Stream) -> bool {
-    iswalnum((*stream).next as wint_t) != 0
+    return iswalnum((*stream).next as wint_t) != 0
         || (*stream).next == '_' as i32
-        || (*stream).next == '-' as i32
+        || (*stream).next == '-' as i32;
 }
 unsafe extern "C" fn stream_scan_identifier(mut stream: *mut Stream) {
     loop {
@@ -269,49 +291,66 @@ unsafe extern "C" fn stream_scan_identifier(mut stream: *mut Stream) {
         }
     }
 }
-
 /* *****************
  * CaptureListPool
  ******************/
 unsafe extern "C" fn capture_list_pool_new() -> CaptureListPool {
-    CaptureListPool {
-        list: TSQueryCaptureArray {
-            contents: std::ptr::null_mut::<TSQueryCapture>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        usage_map: 4_294_967_295 as os::raw::c_uint,
+    return {
+        let mut init = CaptureListPool {
+            list: [CaptureList {
+                contents: 0 as *mut TSQueryCapture,
+                size: 0,
+                capacity: 0,
+            }; 32],
+            empty_list: {
+                let mut init = CaptureList {
+                    contents: 0 as *mut TSQueryCapture,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            usage_map: 4294967295 as os::raw::c_uint,
+        };
+        init
+    };
+}
+unsafe extern "C" fn capture_list_pool_reset(mut self_0: *mut CaptureListPool) {
+    (*self_0).usage_map = 4294967295 as os::raw::c_uint;
+    let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+    while i < 32 as os::raw::c_int as os::raw::c_uint {
+        (*self_0).list[i as usize].size = 0 as os::raw::c_int as u32;
+        i = i.wrapping_add(1)
     }
 }
-unsafe extern "C" fn capture_list_pool_reset(mut self_0: *mut CaptureListPool, mut list_size: u16) {
-    (*self_0).usage_map = 4_294_967_295 as os::raw::c_uint;
-    let mut total_size: u32 =
-        (MAX_STATE_COUNT as os::raw::c_int * list_size as os::raw::c_int) as u32;
-    array__reserve(
-        &mut (*self_0).list as *mut TSQueryCaptureArray as *mut VoidArray,
-        ::std::mem::size_of::<TSQueryCapture>(),
-        total_size,
-    );
-    (*self_0).list.size = total_size;
-}
 unsafe extern "C" fn capture_list_pool_delete(mut self_0: *mut CaptureListPool) {
-    array__delete(&mut (*self_0).list as *mut TSQueryCaptureArray as *mut VoidArray);
+    let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+    while i < 32 as os::raw::c_int as os::raw::c_uint {
+        array__delete(
+            &mut *(*self_0).list.as_mut_ptr().offset(i as isize) as *mut CaptureList
+                as *mut VoidArray,
+        );
+        i = i.wrapping_add(1)
+    }
 }
 unsafe extern "C" fn capture_list_pool_get(
+    mut self_0: *const CaptureListPool,
+    mut id: u16,
+) -> *const CaptureList {
+    if id as os::raw::c_int >= 32 as os::raw::c_int {
+        return &(*self_0).empty_list;
+    }
+    return &*(*self_0).list.as_ptr().offset(id as isize) as *const CaptureList;
+}
+unsafe extern "C" fn capture_list_pool_get_mut(
     mut self_0: *mut CaptureListPool,
     mut id: u16,
-) -> *mut TSQueryCapture {
-    &mut *(*self_0).list.contents.offset(
-        (id as os::raw::c_uint).wrapping_mul(
-            (*self_0)
-                .list
-                .size
-                .wrapping_div(MAX_STATE_COUNT as os::raw::c_uint),
-        ) as isize,
-    ) as *mut TSQueryCapture
+) -> *mut CaptureList {
+    assert!(id < 32);
+    return &mut *(*self_0).list.as_mut_ptr().offset(id as isize) as *mut CaptureList;
 }
 unsafe extern "C" fn capture_list_pool_is_empty(mut self_0: *const CaptureListPool) -> bool {
-    (*self_0).usage_map == 0 as os::raw::c_int as os::raw::c_uint
+    return (*self_0).usage_map == 0 as os::raw::c_int as os::raw::c_uint;
 }
 unsafe extern "C" fn capture_list_pool_acquire(mut self_0: *mut CaptureListPool) -> u16 {
     // In the usage_map bitmask, ones represent free lists, and zeros represent
@@ -319,36 +358,49 @@ unsafe extern "C" fn capture_list_pool_acquire(mut self_0: *mut CaptureListPool)
     // the leading zeros in the usage map. An id of zero corresponds to the
     // highest-order bit in the bitmask.
     let mut id: u16 = count_leading_zeros((*self_0).usage_map) as u16;
-    if id as os::raw::c_int == 32 as os::raw::c_int {
+    if id as os::raw::c_int >= 32 as os::raw::c_int {
         return NONE;
     }
     (*self_0).usage_map &= !bitmask_for_index(id);
-    id
+    (*self_0).list[id as usize].size = 0 as os::raw::c_int as u32;
+    return id;
 }
 unsafe extern "C" fn capture_list_pool_release(mut self_0: *mut CaptureListPool, mut id: u16) {
+    if id as os::raw::c_int >= 32 as os::raw::c_int {
+        return;
+    }
+    (*self_0).list[id as usize].size = 0 as os::raw::c_int as u32;
     (*self_0).usage_map |= bitmask_for_index(id);
 }
-
 /* *************
  * SymbolTable
  **************/
 unsafe extern "C" fn symbol_table_new() -> SymbolTable {
-    SymbolTable {
-        characters: SymbolTableCharacters {
-            contents: ptr::null_mut(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        slices: SymbolTableSlices {
-            contents: std::ptr::null_mut::<Slice>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-    }
+    return {
+        let mut init = SymbolTable {
+            characters: {
+                let mut init = C2RustUnnamed_10 {
+                    contents: 0 as *mut os::raw::c_char,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            slices: {
+                let mut init = C2RustUnnamed_9 {
+                    contents: 0 as *mut Slice,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+        };
+        init
+    };
 }
 unsafe extern "C" fn symbol_table_delete(mut self_0: *mut SymbolTable) {
-    array__delete(&mut (*self_0).characters as *mut SymbolTableCharacters as *mut VoidArray);
-    array__delete(&mut (*self_0).slices as *mut SymbolTableSlices as *mut VoidArray);
+    array__delete(&mut (*self_0).characters as *mut C2RustUnnamed_10 as *mut VoidArray);
+    array__delete(&mut (*self_0).slices as *mut C2RustUnnamed_9 as *mut VoidArray);
 }
 unsafe extern "C" fn symbol_table_id_for_name(
     mut self_0: *const SymbolTable,
@@ -360,7 +412,7 @@ unsafe extern "C" fn symbol_table_id_for_name(
         let mut slice: Slice = *(*self_0).slices.contents.offset(i as isize);
         if slice.length == length
             && strncmp(
-                &*(*self_0).characters.contents.offset(slice.offset as isize),
+                &mut *(*self_0).characters.contents.offset(slice.offset as isize),
                 name,
                 length as usize,
             ) == 0
@@ -369,7 +421,7 @@ unsafe extern "C" fn symbol_table_id_for_name(
         }
         i = i.wrapping_add(1)
     }
-    -(1 as os::raw::c_int)
+    return -(1 as os::raw::c_int);
 }
 unsafe extern "C" fn symbol_table_name_for_id(
     mut self_0: *const SymbolTable,
@@ -378,7 +430,8 @@ unsafe extern "C" fn symbol_table_name_for_id(
 ) -> *const os::raw::c_char {
     let mut slice: Slice = *(*self_0).slices.contents.offset(id as isize);
     *length = slice.length;
-    &mut *(*self_0).characters.contents.offset(slice.offset as isize) as *mut os::raw::c_char
+    return &mut *(*self_0).characters.contents.offset(slice.offset as isize)
+        as *mut os::raw::c_char;
 }
 unsafe extern "C" fn symbol_table_insert_name(
     mut self_0: *mut SymbolTable,
@@ -389,13 +442,16 @@ unsafe extern "C" fn symbol_table_insert_name(
     if id >= 0 as os::raw::c_int {
         return id as u16;
     }
-    let mut slice = Slice {
-        offset: (*self_0).characters.size,
-        length,
+    let mut slice: Slice = {
+        let mut init = Slice {
+            offset: (*self_0).characters.size,
+            length: length,
+        };
+        init
     };
     array__grow(
-        &mut (*self_0).characters as *mut SymbolTableCharacters as *mut VoidArray,
-        length.wrapping_add(1) as usize,
+        &mut (*self_0).characters as *mut C2RustUnnamed_10 as *mut VoidArray,
+        length.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as usize,
         ::std::mem::size_of::<os::raw::c_char>(),
     );
     write_bytes(
@@ -407,39 +463,47 @@ unsafe extern "C" fn symbol_table_insert_name(
         length.wrapping_add(1) as usize,
     );
     (*self_0).characters.size = ((*self_0).characters.size as os::raw::c_uint)
-        .wrapping_add(length.wrapping_add(1)) as u32 as u32;
+        .wrapping_add(length.wrapping_add(1 as os::raw::c_int as os::raw::c_uint))
+        as u32 as u32;
     copy_nonoverlapping(
         name,
         &mut *(*self_0).characters.contents.offset(slice.offset as isize) as *mut os::raw::c_char,
         length as usize,
     );
-    *(*self_0)
-        .characters
-        .contents
-        .offset((*self_0).characters.size.wrapping_sub(1) as isize) =
-        0 as os::raw::c_int as os::raw::c_char;
+    *(*self_0).characters.contents.offset(
+        (*self_0)
+            .characters
+            .size
+            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as isize,
+    ) = 0 as os::raw::c_int as os::raw::c_char;
     array__grow(
-        &mut (*self_0).slices as *mut SymbolTableSlices as *mut VoidArray,
+        &mut (*self_0).slices as *mut C2RustUnnamed_9 as *mut VoidArray,
         1 as os::raw::c_int as usize,
         ::std::mem::size_of::<Slice>(),
     );
     let fresh1 = (*self_0).slices.size;
     (*self_0).slices.size = (*self_0).slices.size.wrapping_add(1);
     *(*self_0).slices.contents.offset(fresh1 as isize) = slice;
-    (*self_0).slices.size.wrapping_sub(1) as u16
+    return (*self_0)
+        .slices
+        .size
+        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as u16;
 }
 unsafe extern "C" fn symbol_table_insert_name_with_escapes(
     mut self_0: *mut SymbolTable,
     mut escaped_name: *const os::raw::c_char,
     mut escaped_length: u32,
 ) -> u16 {
-    let mut slice = Slice {
-        offset: (*self_0).characters.size,
-        length: 0 as os::raw::c_int as u32,
+    let mut slice: Slice = {
+        let mut init = Slice {
+            offset: (*self_0).characters.size,
+            length: 0 as os::raw::c_int as u32,
+        };
+        init
     };
     array__grow(
-        &mut (*self_0).characters as *mut SymbolTableCharacters as *mut VoidArray,
-        escaped_length.wrapping_add(1) as usize,
+        &mut (*self_0).characters as *mut C2RustUnnamed_10 as *mut VoidArray,
+        escaped_length.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as usize,
         ::std::mem::size_of::<os::raw::c_char>(),
     );
     write_bytes(
@@ -451,11 +515,12 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
         escaped_length.wrapping_add(1) as usize,
     );
     (*self_0).characters.size = ((*self_0).characters.size as os::raw::c_uint)
-        .wrapping_add(escaped_length.wrapping_add(1)) as u32 as u32;
+        .wrapping_add(escaped_length.wrapping_add(1 as os::raw::c_int as os::raw::c_uint))
+        as u32 as u32;
     // Copy the contents of the literal into the characters buffer, processing escape
     // sequences like \n and \". This needs to be done before checking if the literal
     // is already present, in order to do the string comparison.
-    let mut is_escaped: bool = false;
+    let mut is_escaped: bool = 0 as os::raw::c_int != 0;
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     while i < escaped_length {
         let mut src: *const os::raw::c_char =
@@ -473,10 +538,10 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
                 48 => *dest = '\u{0}' as i32 as os::raw::c_char,
                 _ => *dest = *src,
             }
-            is_escaped = false;
+            is_escaped = 0 as os::raw::c_int != 0;
             slice.length = slice.length.wrapping_add(1)
         } else if *src as os::raw::c_int == '\\' as i32 {
-            is_escaped = true
+            is_escaped = 1 as os::raw::c_int != 0
         } else {
             *dest = *src;
             slice.length = slice.length.wrapping_add(1)
@@ -487,13 +552,13 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
     // buffer and return the existing id.
     let mut id: os::raw::c_int = symbol_table_id_for_name(
         self_0,
-        &*(*self_0).characters.contents.offset(slice.offset as isize),
+        &mut *(*self_0).characters.contents.offset(slice.offset as isize),
         slice.length,
     );
     if id >= 0 as os::raw::c_int {
         (*self_0).characters.size = ((*self_0).characters.size as os::raw::c_uint)
-            .wrapping_sub(escaped_length.wrapping_add(1)) as u32
-            as u32;
+            .wrapping_sub(escaped_length.wrapping_add(1 as os::raw::c_int as os::raw::c_uint))
+            as u32 as u32;
         return id as u16;
     }
     *(*self_0)
@@ -502,16 +567,18 @@ unsafe extern "C" fn symbol_table_insert_name_with_escapes(
         .offset(slice.offset.wrapping_add(slice.length) as isize) =
         0 as os::raw::c_int as os::raw::c_char;
     array__grow(
-        &mut (*self_0).slices as *mut SymbolTableSlices as *mut VoidArray,
+        &mut (*self_0).slices as *mut C2RustUnnamed_9 as *mut VoidArray,
         1 as os::raw::c_int as usize,
         ::std::mem::size_of::<Slice>(),
     );
     let fresh2 = (*self_0).slices.size;
     (*self_0).slices.size = (*self_0).slices.size.wrapping_add(1);
     *(*self_0).slices.contents.offset(fresh2 as isize) = slice;
-    (*self_0).slices.size.wrapping_sub(1) as u16
+    return (*self_0)
+        .slices
+        .size
+        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as u16;
 }
-
 /* ***********
  * QueryStep
  ************/
@@ -520,21 +587,29 @@ unsafe extern "C" fn query_step__new(
     mut depth: u16,
     mut is_immediate: bool,
 ) -> QueryStep {
-    let mut init = QueryStep {
-        depth_contains_captures_is_immediate_is_last: [0; 2],
-        symbol,
-        field: 0 as os::raw::c_int as TSFieldId,
-        capture_ids: [NONE, NONE, NONE, NONE],
+    return {
+        let mut init =
+                   QueryStep{contains_captures_is_pattern_start_is_immediate_is_last_child_is_pass_through_is_dead_end_alternative_is_immediate:
+                                 [0; 1],
+                             c2rust_padding: [0; 1],
+                             symbol: symbol,
+                             field: 0 as os::raw::c_int as TSFieldId,
+                             capture_ids: [NONE, NONE, NONE],
+                             alternative_index: NONE,
+                             depth: depth,};
+        init.set_contains_captures(0 as os::raw::c_int != 0);
+        init.set_is_pattern_start(0 as os::raw::c_int != 0);
+        init.set_is_immediate(is_immediate);
+        init.set_is_last_child(0 as os::raw::c_int != 0);
+        init.set_is_pass_through(0 as os::raw::c_int != 0);
+        init.set_is_dead_end(0 as os::raw::c_int != 0);
+        init.set_alternative_is_immediate(0 as os::raw::c_int != 0);
+        init
     };
-    init.set_depth(depth);
-    init.set_contains_captures(false);
-    init.set_is_immediate(is_immediate);
-    init.set_is_last(false);
-    init
 }
 unsafe extern "C" fn query_step__add_capture(mut self_0: *mut QueryStep, mut capture_id: u16) {
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
-    while i < 4 as os::raw::c_int as os::raw::c_uint {
+    while i < 3 as os::raw::c_int as os::raw::c_uint {
         if (*self_0).capture_ids[i as usize] as os::raw::c_int == NONE as os::raw::c_int {
             (*self_0).capture_ids[i as usize] = capture_id;
             break;
@@ -545,18 +620,23 @@ unsafe extern "C" fn query_step__add_capture(mut self_0: *mut QueryStep, mut cap
 }
 unsafe extern "C" fn query_step__remove_capture(mut self_0: *mut QueryStep, mut capture_id: u16) {
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
-    while i < 4 as os::raw::c_int as os::raw::c_uint {
+    while i < 3 as os::raw::c_int as os::raw::c_uint {
         if (*self_0).capture_ids[i as usize] as os::raw::c_int == capture_id as os::raw::c_int {
             (*self_0).capture_ids[i as usize] = NONE;
-            while i.wrapping_add(1) < 4 as os::raw::c_int as os::raw::c_uint {
-                if (*self_0).capture_ids[i.wrapping_add(1) as usize] as os::raw::c_int
+            while i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint)
+                < 3 as os::raw::c_int as os::raw::c_uint
+            {
+                if (*self_0).capture_ids
+                    [i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as usize]
+                    as os::raw::c_int
                     == NONE as os::raw::c_int
                 {
                     break;
                 }
-                (*self_0).capture_ids[i as usize] =
-                    (*self_0).capture_ids[i.wrapping_add(1) as usize];
-                (*self_0).capture_ids[i.wrapping_add(1) as usize] = NONE;
+                (*self_0).capture_ids[i as usize] = (*self_0).capture_ids
+                    [i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as usize];
+                (*self_0).capture_ids
+                    [i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as usize] = NONE;
                 i = i.wrapping_add(1)
             }
             break;
@@ -565,7 +645,6 @@ unsafe extern "C" fn query_step__remove_capture(mut self_0: *mut QueryStep, mut 
         }
     }
 }
-
 /* ********
  * Query
  *********/
@@ -593,10 +672,10 @@ unsafe extern "C" fn ts_query__pattern_map_search(
     let mut size: u32 = (*self_0).pattern_map.size.wrapping_sub(base_index);
     if size == 0 as os::raw::c_int as os::raw::c_uint {
         *result = base_index;
-        return false;
+        return 0 as os::raw::c_int != 0;
     }
     while size > 1 as os::raw::c_int as os::raw::c_uint {
-        let mut half_size: u32 = size.wrapping_div(2);
+        let mut half_size: u32 = size.wrapping_div(2 as os::raw::c_int as os::raw::c_uint);
         let mut mid_index: u32 = base_index.wrapping_add(half_size);
         let mut mid_symbol: TSSymbol = (*(*self_0).steps.contents.offset(
             (*(*self_0).pattern_map.contents.offset(mid_index as isize)).step_index as isize,
@@ -622,7 +701,7 @@ unsafe extern "C" fn ts_query__pattern_map_search(
         }
     }
     *result = base_index;
-    needle as os::raw::c_int == symbol as os::raw::c_int
+    return needle as os::raw::c_int == symbol as os::raw::c_int;
 }
 // Insert a new pattern's start index into the pattern map, maintaining
 // the pattern map's ordering invariant.
@@ -631,19 +710,23 @@ unsafe extern "C" fn ts_query__pattern_map_insert(
     mut self_0: *mut TSQuery,
     mut symbol: TSSymbol,
     mut start_step_index: u32,
+    mut pattern_index: u32,
 ) {
     let mut index: u32 = 0;
     ts_query__pattern_map_search(self_0, symbol, &mut index);
     array__splice(
-        &mut (*self_0).pattern_map as *mut TSQueryPatternMap as *mut VoidArray,
+        &mut (*self_0).pattern_map as *mut C2RustUnnamed_7 as *mut VoidArray,
         ::std::mem::size_of::<PatternEntry>(),
         index,
         0 as os::raw::c_int as u32,
         1 as os::raw::c_int as u32,
-        &mut PatternEntry {
-            step_index: start_step_index as u16,
-            pattern_index: (*self_0).pattern_map.size as u16,
-        } as *mut PatternEntry as *const ffi::c_void,
+        &mut {
+            let mut init = PatternEntry {
+                step_index: start_step_index as u16,
+                pattern_index: pattern_index as u16,
+            };
+            init
+        } as *mut PatternEntry as *const os::raw::c_void,
     );
 }
 unsafe extern "C" fn ts_query__finalize_steps(mut self_0: *mut TSQuery) {
@@ -651,26 +734,26 @@ unsafe extern "C" fn ts_query__finalize_steps(mut self_0: *mut TSQuery) {
     while i < (*self_0).steps.size {
         let mut step: *mut QueryStep =
             &mut *(*self_0).steps.contents.offset(i as isize) as *mut QueryStep;
-        let mut depth: u32 = (*step).depth() as u32;
+        let mut depth: u32 = (*step).depth as u32;
         if (*step).capture_ids[0 as os::raw::c_int as usize] as os::raw::c_int
             != NONE as os::raw::c_int
         {
-            (*step).set_contains_captures(true)
+            (*step).set_contains_captures(1 as os::raw::c_int != 0)
         } else {
-            (*step).set_contains_captures(false);
-            let mut j: os::raw::c_uint = i.wrapping_add(1);
+            (*step).set_contains_captures(0 as os::raw::c_int != 0);
+            let mut j: os::raw::c_uint = i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint);
             while j < (*self_0).steps.size {
                 let mut s: *mut QueryStep =
                     &mut *(*self_0).steps.contents.offset(j as isize) as *mut QueryStep;
-                if (*s).depth() as os::raw::c_int == PATTERN_DONE_MARKER as os::raw::c_int
-                    || (*s).depth() as os::raw::c_uint <= depth
+                if (*s).depth as os::raw::c_int == PATTERN_DONE_MARKER as os::raw::c_int
+                    || (*s).depth as os::raw::c_uint <= depth
                 {
                     break;
                 }
                 if (*s).capture_ids[0 as os::raw::c_int as usize] as os::raw::c_int
                     != NONE as os::raw::c_int
                 {
-                    (*step).set_contains_captures(true)
+                    (*step).set_contains_captures(1 as os::raw::c_int != 0)
                 }
                 j = j.wrapping_add(1)
             }
@@ -688,15 +771,45 @@ unsafe extern "C" fn ts_query__parse_predicate(
     mut self_0: *mut TSQuery,
     mut stream: *mut Stream,
 ) -> TSQueryError {
-    if (*stream).next == ')' as i32 {
-        return PARENT_DONE;
-    }
-    if (*stream).next != '(' as i32 {
+    if !stream_is_ident_start(stream) {
         return TSQueryErrorSyntax;
     }
-    stream_advance(stream);
+    let mut predicate_name: *const os::raw::c_char = (*stream).input;
+    stream_scan_identifier(stream);
+    let mut length: u32 =
+        (*stream).input.wrapping_offset_from_(predicate_name) as os::raw::c_long as u32;
+    let mut id: u16 =
+        symbol_table_insert_name(&mut (*self_0).predicate_values, predicate_name, length);
+    assert!(
+        (*self_0)
+            .predicates_by_pattern
+            .size
+            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+            < (*self_0).predicates_by_pattern.size
+    );
+    let ref mut fresh3 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
+        (*self_0)
+            .predicates_by_pattern
+            .size
+            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as isize,
+    ) as *mut Slice))
+        .length;
+    *fresh3 = (*fresh3).wrapping_add(1);
+    array__grow(
+        &mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray,
+        1 as os::raw::c_int as usize,
+        ::std::mem::size_of::<TSQueryPredicateStep>(),
+    );
+    let fresh4 = (*self_0).predicate_steps.size;
+    (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
+    *(*self_0).predicate_steps.contents.offset(fresh4 as isize) = {
+        let mut init = TSQueryPredicateStep {
+            type_0: TSQueryPredicateStepTypeString,
+            value_id: id as u32,
+        };
+        init
+    };
     stream_skip_whitespace(stream);
-    let mut step_count: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     loop {
         if (*stream).next == ')' as i32 {
             stream_advance(stream);
@@ -708,23 +821,27 @@ unsafe extern "C" fn ts_query__parse_predicate(
                     .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
                     < (*self_0).predicates_by_pattern.size
             );
-            let fresh3 = &mut (*(&mut *(*self_0)
-                .predicates_by_pattern
-                .contents
-                .offset((*self_0).predicates_by_pattern.size.wrapping_sub(1) as isize)
-                as *mut Slice))
+            let ref mut fresh5 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
+                (*self_0)
+                    .predicates_by_pattern
+                    .size
+                    .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as isize,
+            ) as *mut Slice))
                 .length;
-            *fresh3 = (*fresh3).wrapping_add(1);
+            *fresh5 = (*fresh5).wrapping_add(1);
             array__grow(
-                &mut (*self_0).predicate_steps as *mut TSQueryPredicateSteps as *mut VoidArray,
+                &mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray,
                 1 as os::raw::c_int as usize,
                 ::std::mem::size_of::<TSQueryPredicateStep>(),
             );
-            let fresh4 = (*self_0).predicate_steps.size;
+            let fresh6 = (*self_0).predicate_steps.size;
             (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
-            *(*self_0).predicate_steps.contents.offset(fresh4 as isize) = TSQueryPredicateStep {
-                type_0: TSQueryPredicateStepTypeDone,
-                value_id: 0 as os::raw::c_int as u32,
+            *(*self_0).predicate_steps.contents.offset(fresh6 as isize) = {
+                let mut init = TSQueryPredicateStep {
+                    type_0: TSQueryPredicateStepTypeDone,
+                    value_id: 0 as os::raw::c_int as u32,
+                };
+                init
             };
             break;
         } else {
@@ -737,11 +854,11 @@ unsafe extern "C" fn ts_query__parse_predicate(
                 }
                 let mut capture_name: *const os::raw::c_char = (*stream).input;
                 stream_scan_identifier(stream);
-                let mut length: u32 =
+                let mut length_0: u32 =
                     (*stream).input.wrapping_offset_from_(capture_name) as os::raw::c_long as u32;
                 // Add the capture id to the first step of the pattern
                 let mut capture_id: os::raw::c_int =
-                    symbol_table_id_for_name(&(*self_0).captures, capture_name, length);
+                    symbol_table_id_for_name(&mut (*self_0).captures, capture_name, length_0);
                 if capture_id == -(1 as os::raw::c_int) {
                     stream_reset(stream, capture_name);
                     return TSQueryErrorCapture;
@@ -753,35 +870,40 @@ unsafe extern "C" fn ts_query__parse_predicate(
                         .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
                         < (*self_0).predicates_by_pattern.size
                 );
-                let fresh5 = &mut (*(&mut *(*self_0)
-                    .predicates_by_pattern
-                    .contents
-                    .offset((*self_0).predicates_by_pattern.size.wrapping_sub(1) as isize)
-                    as *mut Slice))
+                let ref mut fresh7 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                        as isize,
+                ) as *mut Slice))
                     .length;
-                *fresh5 = (*fresh5).wrapping_add(1);
+                *fresh7 = (*fresh7).wrapping_add(1);
                 array__grow(
-                    &mut (*self_0).predicate_steps as *mut TSQueryPredicateSteps as *mut VoidArray,
+                    &mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray,
                     1 as os::raw::c_int as usize,
                     ::std::mem::size_of::<TSQueryPredicateStep>(),
                 );
-                let fresh6 = (*self_0).predicate_steps.size;
+                let fresh8 = (*self_0).predicate_steps.size;
                 (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
-                *(*self_0).predicate_steps.contents.offset(fresh6 as isize) = TSQueryPredicateStep {
-                    type_0: TSQueryPredicateStepTypeCapture,
-                    value_id: capture_id as u32,
+                *(*self_0).predicate_steps.contents.offset(fresh8 as isize) = {
+                    let mut init = TSQueryPredicateStep {
+                        type_0: TSQueryPredicateStepTypeCapture,
+                        value_id: capture_id as u32,
+                    };
+                    init
                 }
             } else if (*stream).next == '\"' as i32 {
                 stream_advance(stream);
                 // Parse a string literal
                 // Parse the string content
-                let mut is_escaped: bool = false;
+                let mut is_escaped: bool = 0 as os::raw::c_int != 0;
                 let mut string_content: *const os::raw::c_char = (*stream).input;
                 loop {
                     if is_escaped {
-                        is_escaped = false
+                        is_escaped = 0 as os::raw::c_int != 0
                     } else if (*stream).next == '\\' as i32 {
-                        is_escaped = true
+                        is_escaped = 1 as os::raw::c_int != 0
                     } else {
                         if (*stream).next == '\"' as i32 {
                             break;
@@ -802,52 +924,12 @@ unsafe extern "C" fn ts_query__parse_predicate(
                         return TSQueryErrorSyntax;
                     }
                 }
-                let mut length_0: u32 =
+                let mut length_1: u32 =
                     (*stream).input.wrapping_offset_from_(string_content) as os::raw::c_long as u32;
                 // Add a step for the node
-                let mut id: u16 = symbol_table_insert_name_with_escapes(
+                let mut id_0: u16 = symbol_table_insert_name_with_escapes(
                     &mut (*self_0).predicate_values,
                     string_content,
-                    length_0,
-                );
-                assert!(
-                    (*self_0)
-                        .predicates_by_pattern
-                        .size
-                        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
-                        < (*self_0).predicates_by_pattern.size
-                );
-                let fresh7 = &mut (*(&mut *(*self_0)
-                    .predicates_by_pattern
-                    .contents
-                    .offset((*self_0).predicates_by_pattern.size.wrapping_sub(1) as isize)
-                    as *mut Slice))
-                    .length;
-                *fresh7 = (*fresh7).wrapping_add(1);
-                array__grow(
-                    &mut (*self_0).predicate_steps as *mut TSQueryPredicateSteps as *mut VoidArray,
-                    1 as os::raw::c_int as usize,
-                    ::std::mem::size_of::<TSQueryPredicateStep>(),
-                );
-                let fresh8 = (*self_0).predicate_steps.size;
-                (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
-                *(*self_0).predicate_steps.contents.offset(fresh8 as isize) =
-                    TSQueryPredicateStep {
-                        type_0: TSQueryPredicateStepTypeString,
-                        value_id: id as u32,
-                    };
-                if (*stream).next != '\"' as i32 {
-                    return TSQueryErrorSyntax;
-                }
-                stream_advance(stream);
-            } else if stream_is_ident_start(stream) {
-                let mut symbol_start: *const os::raw::c_char = (*stream).input;
-                stream_scan_identifier(stream);
-                let mut length_1: u32 =
-                    (*stream).input.wrapping_offset_from_(symbol_start) as os::raw::c_long as u32;
-                let mut id_0: u16 = symbol_table_insert_name(
-                    &mut (*self_0).predicate_values,
-                    symbol_start,
                     length_1,
                 );
                 assert!(
@@ -857,33 +939,80 @@ unsafe extern "C" fn ts_query__parse_predicate(
                         .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
                         < (*self_0).predicates_by_pattern.size
                 );
-                let fresh9 = &mut (*(&mut *(*self_0)
-                    .predicates_by_pattern
-                    .contents
-                    .offset((*self_0).predicates_by_pattern.size.wrapping_sub(1) as isize)
-                    as *mut Slice))
+                let ref mut fresh9 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                        as isize,
+                ) as *mut Slice))
                     .length;
                 *fresh9 = (*fresh9).wrapping_add(1);
                 array__grow(
-                    &mut (*self_0).predicate_steps as *mut TSQueryPredicateSteps as *mut VoidArray,
+                    &mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray,
                     1 as os::raw::c_int as usize,
                     ::std::mem::size_of::<TSQueryPredicateStep>(),
                 );
                 let fresh10 = (*self_0).predicate_steps.size;
                 (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
-                *(*self_0).predicate_steps.contents.offset(fresh10 as isize) =
-                    TSQueryPredicateStep {
+                *(*self_0).predicate_steps.contents.offset(fresh10 as isize) = {
+                    let mut init = TSQueryPredicateStep {
                         type_0: TSQueryPredicateStepTypeString,
                         value_id: id_0 as u32,
-                    }
+                    };
+                    init
+                };
+                if (*stream).next != '\"' as i32 {
+                    return TSQueryErrorSyntax;
+                }
+                stream_advance(stream);
+            } else if stream_is_ident_start(stream) {
+                let mut symbol_start: *const os::raw::c_char = (*stream).input;
+                stream_scan_identifier(stream);
+                let mut length_2: u32 =
+                    (*stream).input.wrapping_offset_from_(symbol_start) as os::raw::c_long as u32;
+                let mut id_1: u16 = symbol_table_insert_name(
+                    &mut (*self_0).predicate_values,
+                    symbol_start,
+                    length_2,
+                );
+                assert!(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                        < (*self_0).predicates_by_pattern.size
+                );
+                let ref mut fresh11 = (*(&mut *(*self_0).predicates_by_pattern.contents.offset(
+                    (*self_0)
+                        .predicates_by_pattern
+                        .size
+                        .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                        as isize,
+                ) as *mut Slice))
+                    .length;
+                *fresh11 = (*fresh11).wrapping_add(1);
+                array__grow(
+                    &mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray,
+                    1 as os::raw::c_int as usize,
+                    ::std::mem::size_of::<TSQueryPredicateStep>(),
+                );
+                let fresh12 = (*self_0).predicate_steps.size;
+                (*self_0).predicate_steps.size = (*self_0).predicate_steps.size.wrapping_add(1);
+                *(*self_0).predicate_steps.contents.offset(fresh12 as isize) = {
+                    let mut init = TSQueryPredicateStep {
+                        type_0: TSQueryPredicateStepTypeString,
+                        value_id: id_1 as u32,
+                    };
+                    init
+                }
             } else {
                 return TSQueryErrorSyntax;
             }
-            step_count = step_count.wrapping_add(1);
             stream_skip_whitespace(stream);
         }
     }
-    TSQueryErrorNone
+    return TSQueryErrorNone;
 }
 // Parse a bare symbol
 // Read one S-expression pattern from the stream, and incorporate it into
@@ -896,111 +1025,237 @@ unsafe extern "C" fn ts_query__parse_pattern(
     mut capture_count: *mut u32,
     mut is_immediate: bool,
 ) -> TSQueryError {
-    let mut starting_step_index: u16 = (*self_0).steps.size as u16;
+    let mut starting_step_index: u32 = (*self_0).steps.size;
     if (*stream).next == 0 as os::raw::c_int {
         return TSQueryErrorSyntax;
     }
-    // Finish the parent S-expression
-    if (*stream).next == ')' as i32 {
+    // Finish the parent S-expression.
+    if (*stream).next == ')' as i32 || (*stream).next == ']' as i32 {
         return PARENT_DONE;
     } else {
-        // Parse a parenthesized node expression
-        if (*stream).next == '(' as i32 {
+        // An open bracket is the start of an alternation.
+        if (*stream).next == '[' as i32 {
             stream_advance(stream);
             stream_skip_whitespace(stream);
-            // Parse a nested list, which represents a pattern followed by
-            // zero-or-more predicates.
-            if (*stream).next == '(' as i32 && depth == 0 as os::raw::c_int as os::raw::c_uint {
-                let mut e: TSQueryError = ts_query__parse_pattern(
-                    self_0,
-                    stream,
-                    0 as os::raw::c_int as u32,
-                    capture_count,
-                    is_immediate,
-                );
-                if e as u64 != 0 {
-                    return e;
-                }
-                // Parse the predicates.
-                stream_skip_whitespace(stream);
-                loop {
-                    let mut e_0: TSQueryError = ts_query__parse_predicate(self_0, stream);
-                    if e_0 as os::raw::c_uint == PARENT_DONE as os::raw::c_uint {
-                        stream_advance(stream);
-                        stream_skip_whitespace(stream);
-                        return TSQueryErrorNone;
-                    } else if e_0 as u64 != 0 {
-                        return e_0;
-                    }
-                }
-            }
-            let mut symbol: TSSymbol = 0;
-            // Parse the wildcard symbol
-            if (*stream).next == '*' as i32 {
-                symbol = if depth > 0 as os::raw::c_int as os::raw::c_uint {
-                    NAMED_WILDCARD_SYMBOL as os::raw::c_int
-                } else {
-                    WILDCARD_SYMBOL as os::raw::c_int
-                } as TSSymbol;
-                stream_advance(stream);
-            } else if stream_is_ident_start(stream) {
-                let mut node_name: *const os::raw::c_char = (*stream).input;
-                stream_scan_identifier(stream);
-                let mut length: u32 =
-                    (*stream).input.wrapping_offset_from_(node_name) as os::raw::c_long as u32;
-                symbol = ts_language_symbol_for_name((*self_0).language, node_name, length, true);
-                if symbol == 0 {
-                    stream_reset(stream, node_name);
-                    return TSQueryErrorNodeType;
-                }
-            } else {
-                return TSQueryErrorSyntax;
-            }
-            // Parse a normal node name
-            // Add a step for the node.
-            array__grow(
-                &mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray,
-                1 as os::raw::c_int as usize,
-                ::std::mem::size_of::<QueryStep>(),
-            );
-            let fresh11 = (*self_0).steps.size;
-            (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
-            *(*self_0).steps.contents.offset(fresh11 as isize) =
-                query_step__new(symbol, depth as u16, is_immediate);
-            // Parse the child patterns
-            stream_skip_whitespace(stream);
-            let mut child_is_immediate: bool = false;
-            let mut child_start_step_index: u16 = (*self_0).steps.size as u16;
+            // Parse each branch, and add a placeholder step in between the branches.
+            let mut branch_step_indices: C2RustUnnamed_13 = {
+                let mut init = C2RustUnnamed_13 {
+                    contents: 0 as *mut u32,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            };
             loop {
-                if (*stream).next == '.' as i32 {
-                    child_is_immediate = true;
-                    stream_advance(stream);
-                    stream_skip_whitespace(stream);
-                }
-                let mut e_1: TSQueryError = ts_query__parse_pattern(
-                    self_0,
-                    stream,
-                    depth.wrapping_add(1),
-                    capture_count,
-                    child_is_immediate,
-                );
-                if e_1 as os::raw::c_uint == PARENT_DONE as os::raw::c_uint {
-                    if child_is_immediate {
-                        let fresh12 = &mut (*(*self_0)
-                            .steps
-                            .contents
-                            .offset(child_start_step_index as isize));
-                        (*fresh12).set_is_last(true)
-                    }
+                let mut start_index: u32 = (*self_0).steps.size;
+                let mut e: TSQueryError =
+                    ts_query__parse_pattern(self_0, stream, depth, capture_count, is_immediate);
+                if e as os::raw::c_uint == PARENT_DONE as os::raw::c_uint
+                    && (*stream).next == ']' as i32
+                    && branch_step_indices.size > 0 as os::raw::c_int as os::raw::c_uint
+                {
                     stream_advance(stream);
                     break;
                 } else {
-                    if e_1 as u64 != 0 {
-                        return e_1;
+                    if e as u64 != 0 {
+                        array__delete(
+                            &mut branch_step_indices as *mut C2RustUnnamed_13 as *mut VoidArray,
+                        );
+                        return e;
                     }
-                    child_is_immediate = false
+                    array__grow(
+                        &mut branch_step_indices as *mut C2RustUnnamed_13 as *mut VoidArray,
+                        1 as os::raw::c_int as usize,
+                        ::std::mem::size_of::<u32>(),
+                    );
+                    let fresh13 = branch_step_indices.size;
+                    branch_step_indices.size = branch_step_indices.size.wrapping_add(1);
+                    *branch_step_indices.contents.offset(fresh13 as isize) = start_index;
+                    array__grow(
+                        &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
+                        1 as os::raw::c_int as usize,
+                        ::std::mem::size_of::<QueryStep>(),
+                    );
+                    let fresh14 = (*self_0).steps.size;
+                    (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
+                    *(*self_0).steps.contents.offset(fresh14 as isize) = query_step__new(
+                        0 as os::raw::c_int as TSSymbol,
+                        depth as u16,
+                        0 as os::raw::c_int != 0,
+                    )
                 }
             }
+            (*self_0).steps.size = (*self_0).steps.size.wrapping_sub(1);
+            // For all of the branches except for the last one, add the subsequent branch as an
+            // alternative, and link the end of the branch to the current end of the steps.
+            let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+            while i < branch_step_indices
+                .size
+                .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+            {
+                let mut step_index: u32 = *branch_step_indices.contents.offset(i as isize);
+                let mut next_step_index: u32 = *branch_step_indices
+                    .contents
+                    .offset(i.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as isize);
+                let mut start_step: *mut QueryStep =
+                    &mut *(*self_0).steps.contents.offset(step_index as isize) as *mut QueryStep;
+                let mut end_step: *mut QueryStep = &mut *(*self_0).steps.contents.offset(
+                    next_step_index.wrapping_sub(1 as os::raw::c_int as os::raw::c_uint) as isize,
+                ) as *mut QueryStep;
+                (*start_step).alternative_index = next_step_index as u16;
+                (*end_step).alternative_index = (*self_0).steps.size as u16;
+                (*end_step).set_is_dead_end(1 as os::raw::c_int != 0);
+                i = i.wrapping_add(1)
+            }
+            array__delete(&mut branch_step_indices as *mut C2RustUnnamed_13 as *mut VoidArray);
+        } else if (*stream).next == '(' as i32 {
+            stream_advance(stream);
+            stream_skip_whitespace(stream);
+            // An open parenthesis can be the start of three possible constructs:
+            // * A grouped sequence
+            // * A predicate
+            // * A named node
+            // If this parenthesis is followed by a node, then it represents a grouped sequence.
+            if (*stream).next == '(' as i32
+                || (*stream).next == '\"' as i32
+                || (*stream).next == '[' as i32
+            {
+                let mut child_is_immediate: bool = 0 as os::raw::c_int != 0;
+                loop {
+                    if (*stream).next == '.' as i32 {
+                        child_is_immediate = 1 as os::raw::c_int != 0;
+                        stream_advance(stream);
+                        stream_skip_whitespace(stream);
+                    }
+                    let mut e_0: TSQueryError = ts_query__parse_pattern(
+                        self_0,
+                        stream,
+                        depth,
+                        capture_count,
+                        child_is_immediate,
+                    );
+                    if e_0 as os::raw::c_uint == PARENT_DONE as os::raw::c_uint
+                        && (*stream).next == ')' as i32
+                    {
+                        stream_advance(stream);
+                        break;
+                    } else {
+                        if e_0 as u64 != 0 {
+                            return e_0;
+                        }
+                        child_is_immediate = 0 as os::raw::c_int != 0
+                    }
+                }
+            } else if (*stream).next == '#' as i32 {
+                stream_advance(stream);
+                return ts_query__parse_predicate(self_0, stream);
+            } else {
+                // A pound character indicates the start of a predicate.
+                // Otherwise, this parenthesis is the start of a named node.
+                let mut symbol: TSSymbol = 0;
+                // Parse the wildcard symbol
+                if (*stream).next == '_' as i32 || (*stream).next == '*' as i32 {
+                    symbol = if depth > 0 as os::raw::c_int as os::raw::c_uint {
+                        NAMED_WILDCARD_SYMBOL as os::raw::c_int
+                    } else {
+                        WILDCARD_SYMBOL as os::raw::c_int
+                    } as TSSymbol;
+                    stream_advance(stream);
+                } else if stream_is_ident_start(stream) {
+                    let mut node_name: *const os::raw::c_char = (*stream).input;
+                    stream_scan_identifier(stream);
+                    let mut length: u32 =
+                        (*stream).input.wrapping_offset_from_(node_name) as os::raw::c_long as u32;
+                    // Parse a normal node name
+                    // TODO - remove.
+                    // For temporary backward compatibility, handle predicates without the leading '#' sign.
+                    if length > 0 as os::raw::c_int as os::raw::c_uint
+                        && (*node_name
+                            .offset(length.wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                                as isize) as os::raw::c_int
+                            == '!' as i32
+                            || *node_name
+                                .offset(length.wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
+                                    as isize) as os::raw::c_int
+                                == '?' as i32)
+                    {
+                        stream_reset(stream, node_name);
+                        return ts_query__parse_predicate(self_0, stream);
+                    }
+                    symbol = ts_language_symbol_for_name(
+                        (*self_0).language,
+                        node_name,
+                        length,
+                        1 as os::raw::c_int != 0,
+                    );
+                    if symbol == 0 {
+                        stream_reset(stream, node_name);
+                        return TSQueryErrorNodeType;
+                    }
+                } else {
+                    return TSQueryErrorSyntax;
+                }
+                // Add a step for the node.
+                array__grow(
+                    &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
+                    1 as os::raw::c_int as usize,
+                    ::std::mem::size_of::<QueryStep>(),
+                );
+                let fresh15 = (*self_0).steps.size;
+                (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
+                *(*self_0).steps.contents.offset(fresh15 as isize) =
+                    query_step__new(symbol, depth as u16, is_immediate);
+                // Parse the child patterns
+                stream_skip_whitespace(stream);
+                let mut child_is_immediate_0: bool = 0 as os::raw::c_int != 0;
+                let mut child_start_step_index: u16 = (*self_0).steps.size as u16;
+                loop {
+                    if (*stream).next == '.' as i32 {
+                        child_is_immediate_0 = 1 as os::raw::c_int != 0;
+                        stream_advance(stream);
+                        stream_skip_whitespace(stream);
+                    }
+                    let mut e_1: TSQueryError = ts_query__parse_pattern(
+                        self_0,
+                        stream,
+                        depth.wrapping_add(1 as os::raw::c_int as os::raw::c_uint),
+                        capture_count,
+                        child_is_immediate_0,
+                    );
+                    if e_1 as os::raw::c_uint == PARENT_DONE as os::raw::c_uint
+                        && (*stream).next == ')' as i32
+                    {
+                        if child_is_immediate_0 {
+                            let ref mut fresh16 = *(*self_0)
+                                .steps
+                                .contents
+                                .offset(child_start_step_index as isize);
+                            (*fresh16).set_is_last_child(1 as os::raw::c_int != 0)
+                        }
+                        stream_advance(stream);
+                        break;
+                    } else {
+                        if e_1 as u64 != 0 {
+                            return e_1;
+                        }
+                        child_is_immediate_0 = 0 as os::raw::c_int != 0
+                    }
+                }
+            }
+        } else if (*stream).next == '_' as i32 || (*stream).next == '*' as i32 {
+            stream_advance(stream);
+            stream_skip_whitespace(stream);
+            // Parse a wildcard pattern
+            // Add a step that matches any kind of node
+            array__grow(
+                &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
+                1 as os::raw::c_int as usize,
+                ::std::mem::size_of::<QueryStep>(),
+            );
+            let fresh17 = (*self_0).steps.size;
+            (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
+            *(*self_0).steps.contents.offset(fresh17 as isize) =
+                query_step__new(WILDCARD_SYMBOL, depth as u16, is_immediate)
         } else if (*stream).next == '\"' as i32 {
             stream_advance(stream);
             // Parse a double-quoted anonymous leaf node expression
@@ -1019,20 +1274,24 @@ unsafe extern "C" fn ts_query__parse_pattern(
             let mut length_0: u32 =
                 (*stream).input.wrapping_offset_from_(string_content) as os::raw::c_long as u32;
             // Add a step for the node
-            let mut symbol_0: TSSymbol =
-                ts_language_symbol_for_name((*self_0).language, string_content, length_0, false);
+            let mut symbol_0: TSSymbol = ts_language_symbol_for_name(
+                (*self_0).language,
+                string_content,
+                length_0,
+                0 as os::raw::c_int != 0,
+            );
             if symbol_0 == 0 {
                 stream_reset(stream, string_content);
                 return TSQueryErrorNodeType;
             }
             array__grow(
-                &mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray,
+                &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
                 1 as os::raw::c_int as usize,
                 ::std::mem::size_of::<QueryStep>(),
             );
-            let fresh13 = (*self_0).steps.size;
+            let fresh18 = (*self_0).steps.size;
             (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
-            *(*self_0).steps.contents.offset(fresh13 as isize) =
+            *(*self_0).steps.contents.offset(fresh18 as isize) =
                 query_step__new(symbol_0, depth as u16, is_immediate);
             if (*stream).next != '\"' as i32 {
                 return TSQueryErrorSyntax;
@@ -1053,7 +1312,7 @@ unsafe extern "C" fn ts_query__parse_pattern(
             stream_advance(stream);
             stream_skip_whitespace(stream);
             // Parse the pattern
-            let mut step_index: u32 = (*self_0).steps.size;
+            let mut step_index_0: u32 = (*self_0).steps.size;
             let mut e_2: TSQueryError =
                 ts_query__parse_pattern(self_0, stream, depth, capture_count, is_immediate);
             if e_2 as os::raw::c_uint == PARENT_DONE as os::raw::c_uint {
@@ -1069,62 +1328,110 @@ unsafe extern "C" fn ts_query__parse_pattern(
                 (*stream).input = field_name;
                 return TSQueryErrorField;
             }
-            (*(*self_0).steps.contents.offset(step_index as isize)).field = field_id
-        } else if (*stream).next == '*' as i32 {
-            stream_advance(stream);
-            stream_skip_whitespace(stream);
-            // Parse a wildcard pattern
-            // Add a step that matches any kind of node
-            array__grow(
-                &mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray,
-                1 as os::raw::c_int as usize,
-                ::std::mem::size_of::<QueryStep>(),
-            );
-            let fresh14 = (*self_0).steps.size;
-            (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
-            *(*self_0).steps.contents.offset(fresh14 as isize) =
-                query_step__new(WILDCARD_SYMBOL, depth as u16, is_immediate)
+            (*(*self_0).steps.contents.offset(step_index_0 as isize)).field = field_id
         } else {
             return TSQueryErrorSyntax;
         }
     }
     stream_skip_whitespace(stream);
-    // Parse an '@'-prefixed capture pattern
-    #[allow(clippy::while_immutable_condition)]
-    while (*stream).next == '@' as i32 {
-        stream_advance(stream);
-        // Parse the capture name
-        if !stream_is_ident_start(stream) {
-            return TSQueryErrorSyntax;
-        }
-        let mut capture_name: *const os::raw::c_char = (*stream).input;
-        stream_scan_identifier(stream);
-        let mut length_2: u32 =
-            (*stream).input.wrapping_offset_from_(capture_name) as os::raw::c_long as u32;
-        // Add the capture id to the first step of the pattern
-        let mut capture_id: u16 =
-            symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
+    loop
+    // Parse suffixes modifiers for this pattern
+    {
         let mut step: *mut QueryStep = &mut *(*self_0)
             .steps
             .contents
             .offset(starting_step_index as isize)
             as *mut QueryStep;
-        query_step__add_capture(step, capture_id);
-        *capture_count = (*capture_count).wrapping_add(1);
-        stream_skip_whitespace(stream);
+        // Parse the one-or-more operator.
+        if (*stream).next == '+' as i32 {
+            stream_advance(stream);
+            stream_skip_whitespace(stream);
+            let mut repeat_step: QueryStep =
+                query_step__new(WILDCARD_SYMBOL, depth as u16, 0 as os::raw::c_int != 0);
+            repeat_step.alternative_index = starting_step_index as u16;
+            repeat_step.set_is_pass_through(1 as os::raw::c_int != 0);
+            repeat_step.set_alternative_is_immediate(1 as os::raw::c_int != 0);
+            array__grow(
+                &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
+                1 as os::raw::c_int as usize,
+                ::std::mem::size_of::<QueryStep>(),
+            );
+            let fresh19 = (*self_0).steps.size;
+            (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
+            *(*self_0).steps.contents.offset(fresh19 as isize) = repeat_step
+        } else if (*stream).next == '*' as i32 {
+            stream_advance(stream);
+            stream_skip_whitespace(stream);
+            let mut repeat_step_0: QueryStep =
+                query_step__new(WILDCARD_SYMBOL, depth as u16, 0 as os::raw::c_int != 0);
+            repeat_step_0.alternative_index = starting_step_index as u16;
+            repeat_step_0.set_is_pass_through(1 as os::raw::c_int != 0);
+            repeat_step_0.set_alternative_is_immediate(1 as os::raw::c_int != 0);
+            array__grow(
+                &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
+                1 as os::raw::c_int as usize,
+                ::std::mem::size_of::<QueryStep>(),
+            );
+            let fresh20 = (*self_0).steps.size;
+            (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
+            *(*self_0).steps.contents.offset(fresh20 as isize) = repeat_step_0;
+            while (*step).alternative_index as os::raw::c_int != NONE as os::raw::c_int {
+                step = &mut *(*self_0)
+                    .steps
+                    .contents
+                    .offset((*step).alternative_index as isize)
+                    as *mut QueryStep
+            }
+            (*step).alternative_index = (*self_0).steps.size as u16
+        } else if (*stream).next == '?' as i32 {
+            stream_advance(stream);
+            stream_skip_whitespace(stream);
+            while (*step).alternative_index as os::raw::c_int != NONE as os::raw::c_int {
+                step = &mut *(*self_0)
+                    .steps
+                    .contents
+                    .offset((*step).alternative_index as isize)
+                    as *mut QueryStep
+            }
+            (*step).alternative_index = (*self_0).steps.size as u16
+        } else {
+            // Parse the zero-or-more repetition operator.
+            // Parse the optional operator.
+            // Parse an '@'-prefixed capture pattern
+            if !((*stream).next == '@' as i32) {
+                break;
+            }
+            stream_advance(stream);
+            if !stream_is_ident_start(stream) {
+                return TSQueryErrorSyntax;
+            }
+            let mut capture_name: *const os::raw::c_char = (*stream).input;
+            stream_scan_identifier(stream);
+            let mut length_2: u32 =
+                (*stream).input.wrapping_offset_from_(capture_name) as os::raw::c_long as u32;
+            stream_skip_whitespace(stream);
+            // Add the capture id to the first step of the pattern
+            let mut capture_id: u16 =
+                symbol_table_insert_name(&mut (*self_0).captures, capture_name, length_2);
+            loop {
+                query_step__add_capture(step, capture_id);
+                if !((*step).alternative_index as os::raw::c_int != NONE as os::raw::c_int
+                    && (*step).alternative_index as os::raw::c_uint > starting_step_index
+                    && ((*step).alternative_index as os::raw::c_uint) < (*self_0).steps.size)
+                {
+                    break;
+                }
+                starting_step_index = (*step).alternative_index as u32;
+                step = &mut *(*self_0)
+                    .steps
+                    .contents
+                    .offset(starting_step_index as isize) as *mut QueryStep
+            }
+            *capture_count = (*capture_count).wrapping_add(1)
+        }
     }
-    TSQueryErrorNone
+    return TSQueryErrorNone;
 }
-
-/// Create a new query from a string containing one or more S-expression
-/// patterns. The query is associated with a particular language, and can
-/// only be run on syntax nodes parsed with that language.
-///
-/// If all of the given patterns are valid, this returns a `TSQuery`.
-/// If a pattern is invalid, this returns `NULL`, and provides two pieces
-/// of information about the problem:
-/// 1. The byte offset of the error is written to the `error_offset` parameter.
-/// 2. The type of error is written to the `error_type` parameter.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_new(
     mut language: *const TSLanguage,
@@ -1133,9 +1440,9 @@ pub unsafe extern "C" fn ts_query_new(
     mut error_offset: *mut u32,
     mut error_type: *mut TSQueryError,
 ) -> *mut TSQuery {
-    let mut symbol_map: *mut TSSymbol = std::ptr::null_mut::<TSSymbol>();
+    let mut symbol_map: *mut TSSymbol = 0 as *mut TSSymbol;
     if ts_language_version(language) >= 11 as os::raw::c_int as os::raw::c_uint {
-        symbol_map = std::ptr::null_mut::<TSSymbol>()
+        symbol_map = 0 as *mut TSSymbol
     } else {
         // Work around the fact that multiple symbols can currently be
         // associated with the same name, due to "simple aliases".
@@ -1154,10 +1461,11 @@ pub unsafe extern "C" fn ts_query_new(
             while j < i {
                 if ts_language_symbol_type(language, j as TSSymbol) as os::raw::c_uint
                     == symbol_type as os::raw::c_uint
-                    && strcmp(name, ts_language_symbol_name(language, j as TSSymbol)) == 0
                 {
-                    *symbol_map.offset(i as isize) = j as TSSymbol;
-                    break;
+                    if strcmp(name, ts_language_symbol_name(language, j as TSSymbol)) == 0 {
+                        *symbol_map.offset(i as isize) = j as TSSymbol;
+                        break;
+                    }
                 }
                 j = j.wrapping_add(1)
             }
@@ -1165,204 +1473,203 @@ pub unsafe extern "C" fn ts_query_new(
         }
     }
     let mut self_0: *mut TSQuery = ts_malloc(::std::mem::size_of::<TSQuery>()) as *mut TSQuery;
-    *self_0 = TSQuery {
-        captures: symbol_table_new(),
-        predicate_values: symbol_table_new(),
-        steps: TSQuerySteps {
-            contents: std::ptr::null_mut::<QueryStep>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        pattern_map: TSQueryPatternMap {
-            contents: std::ptr::null_mut::<PatternEntry>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        predicate_steps: TSQueryPredicateSteps {
-            contents: std::ptr::null_mut::<TSQueryPredicateStep>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        predicates_by_pattern: TSQueryPredicatesByPattern {
-            contents: std::ptr::null_mut::<Slice>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        start_bytes_by_pattern: TSQueryStartBytesByPattern {
-            contents: std::ptr::null_mut::<u32>(),
-            size: 0,
-            capacity: 0,
-        },
-        language,
-        max_capture_count: 0 as os::raw::c_int as u16,
-        wildcard_root_pattern_count: 0 as os::raw::c_int as u16,
-        symbol_map,
+    *self_0 = {
+        let mut init = TSQuery {
+            captures: symbol_table_new(),
+            predicate_values: symbol_table_new(),
+            steps: {
+                let mut init = C2RustUnnamed_8 {
+                    contents: 0 as *mut QueryStep,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            pattern_map: {
+                let mut init = C2RustUnnamed_7 {
+                    contents: 0 as *mut PatternEntry,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            predicate_steps: {
+                let mut init = C2RustUnnamed_6 {
+                    contents: 0 as *mut TSQueryPredicateStep,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            predicates_by_pattern: {
+                let mut init = C2RustUnnamed_5 {
+                    contents: 0 as *mut Slice,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            start_bytes_by_pattern: C2RustUnnamed_4 {
+                contents: 0 as *mut u32,
+                size: 0,
+                capacity: 0,
+            },
+            language: language,
+            wildcard_root_pattern_count: 0 as os::raw::c_int as u16,
+            symbol_map: symbol_map,
+        };
+        init
     };
     // Parse all of the S-expressions in the given string.
     let mut stream: Stream = stream_new(source, source_len);
     stream_skip_whitespace(&mut stream);
-    let mut start_step_index: u32 = 0;
     while stream.input < stream.end {
-        start_step_index = (*self_0).steps.size;
+        let mut pattern_index: u32 = (*self_0).predicates_by_pattern.size;
+        let mut start_step_index: u32 = (*self_0).steps.size;
         let mut capture_count: u32 = 0 as os::raw::c_int as u32;
         array__grow(
-            &mut (*self_0).start_bytes_by_pattern as *mut TSQueryStartBytesByPattern
-                as *mut VoidArray,
+            &mut (*self_0).start_bytes_by_pattern as *mut C2RustUnnamed_4 as *mut VoidArray,
             1 as os::raw::c_int as usize,
             ::std::mem::size_of::<u32>(),
         );
-        let fresh15 = (*self_0).start_bytes_by_pattern.size;
+        let fresh21 = (*self_0).start_bytes_by_pattern.size;
         (*self_0).start_bytes_by_pattern.size =
             (*self_0).start_bytes_by_pattern.size.wrapping_add(1);
         *(*self_0)
             .start_bytes_by_pattern
             .contents
-            .offset(fresh15 as isize) =
+            .offset(fresh21 as isize) =
             stream.input.wrapping_offset_from_(source) as os::raw::c_long as u32;
         array__grow(
-            &mut (*self_0).predicates_by_pattern as *mut TSQueryPredicatesByPattern
-                as *mut VoidArray,
+            &mut (*self_0).predicates_by_pattern as *mut C2RustUnnamed_5 as *mut VoidArray,
             1 as os::raw::c_int as usize,
             ::std::mem::size_of::<Slice>(),
         );
-        let fresh16 = (*self_0).predicates_by_pattern.size;
+        let fresh22 = (*self_0).predicates_by_pattern.size;
         (*self_0).predicates_by_pattern.size = (*self_0).predicates_by_pattern.size.wrapping_add(1);
         *(*self_0)
             .predicates_by_pattern
             .contents
-            .offset(fresh16 as isize) = Slice {
-            offset: (*self_0).predicate_steps.size,
-            length: 0 as os::raw::c_int as u32,
+            .offset(fresh22 as isize) = {
+            let mut init = Slice {
+                offset: (*self_0).predicate_steps.size,
+                length: 0 as os::raw::c_int as u32,
+            };
+            init
         };
         *error_type = ts_query__parse_pattern(
             self_0,
             &mut stream,
             0 as os::raw::c_int as u32,
             &mut capture_count,
-            false,
+            0 as os::raw::c_int != 0,
         );
         array__grow(
-            &mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray,
+            &mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray,
             1 as os::raw::c_int as usize,
             ::std::mem::size_of::<QueryStep>(),
         );
-        let fresh17 = (*self_0).steps.size;
+        let fresh23 = (*self_0).steps.size;
         (*self_0).steps.size = (*self_0).steps.size.wrapping_add(1);
-        *(*self_0).steps.contents.offset(fresh17 as isize) = query_step__new(
+        *(*self_0).steps.contents.offset(fresh23 as isize) = query_step__new(
             0 as os::raw::c_int as TSSymbol,
-            PATTERN_DONE_MARKER as u16,
-            false,
+            PATTERN_DONE_MARKER,
+            0 as os::raw::c_int != 0,
         );
         // If any pattern could not be parsed, then report the error information
         // and terminate.
         if *error_type as u64 != 0 {
+            if *error_type as os::raw::c_uint == PARENT_DONE as os::raw::c_uint {
+                *error_type = TSQueryErrorSyntax
+            }
             *error_offset = stream.input.wrapping_offset_from_(source) as os::raw::c_long as u32;
             ts_query_delete(self_0);
-            return std::ptr::null_mut::<TSQuery>();
+            return 0 as *mut TSQuery;
         }
-        // Maintain a map that can look up patterns for a given root symbol.
-        ts_query__pattern_map_insert(
-            self_0,
-            (*(*self_0).steps.contents.offset(start_step_index as isize)).symbol,
-            start_step_index,
-        );
+        // If a pattern has a wildcard at its root, optimize the matching process
+        // by skipping matching the wildcard.
         if (*(*self_0).steps.contents.offset(start_step_index as isize)).symbol as os::raw::c_int
             == WILDCARD_SYMBOL as os::raw::c_int
         {
-            (*self_0).wildcard_root_pattern_count =
-                (*self_0).wildcard_root_pattern_count.wrapping_add(1)
+            let mut second_step: *mut QueryStep = &mut *(*self_0).steps.contents.offset(
+                start_step_index.wrapping_add(1 as os::raw::c_int as os::raw::c_uint) as isize,
+            ) as *mut QueryStep;
+            if (*second_step).symbol as os::raw::c_int != WILDCARD_SYMBOL as os::raw::c_int
+                && (*second_step).depth as os::raw::c_int != PATTERN_DONE_MARKER as os::raw::c_int
+            {
+                start_step_index = (start_step_index as os::raw::c_uint)
+                    .wrapping_add(1 as os::raw::c_int as os::raw::c_uint)
+                    as u32 as u32
+            }
         }
-        // Keep track of the maximum number of captures in pattern, because
-        // that numer determines how much space is needed to store each capture
-        // list.
-        if capture_count > (*self_0).max_capture_count as os::raw::c_uint {
-            (*self_0).max_capture_count = capture_count as u16
+        loop
+        // Maintain a map that can look up patterns for a given root symbol.
+        {
+            let mut step: *mut QueryStep =
+                &mut *(*self_0).steps.contents.offset(start_step_index as isize) as *mut QueryStep;
+            (*step).set_is_pattern_start(1 as os::raw::c_int != 0);
+            ts_query__pattern_map_insert(self_0, (*step).symbol, start_step_index, pattern_index);
+            if (*step).symbol as os::raw::c_int == WILDCARD_SYMBOL as os::raw::c_int {
+                (*self_0).wildcard_root_pattern_count =
+                    (*self_0).wildcard_root_pattern_count.wrapping_add(1)
+            }
+            // If there are alternatives or options at the root of the pattern,
+            // then add multiple entries to the pattern map.
+            if !((*step).alternative_index as os::raw::c_int != NONE as os::raw::c_int) {
+                break;
+            }
+            start_step_index = (*step).alternative_index as u32
         }
     }
     ts_query__finalize_steps(self_0);
-    self_0
+    return self_0;
 }
-
-/// Delete a query, freeing all of the memory that it used.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_delete(mut self_0: *mut TSQuery) {
     if !self_0.is_null() {
-        array__delete(&mut (*self_0).steps as *mut TSQuerySteps as *mut VoidArray);
-        array__delete(&mut (*self_0).pattern_map as *mut TSQueryPatternMap as *mut VoidArray);
+        array__delete(&mut (*self_0).steps as *mut C2RustUnnamed_8 as *mut VoidArray);
+        array__delete(&mut (*self_0).pattern_map as *mut C2RustUnnamed_7 as *mut VoidArray);
+        array__delete(&mut (*self_0).predicate_steps as *mut C2RustUnnamed_6 as *mut VoidArray);
         array__delete(
-            &mut (*self_0).predicate_steps as *mut TSQueryPredicateSteps as *mut VoidArray,
+            &mut (*self_0).predicates_by_pattern as *mut C2RustUnnamed_5 as *mut VoidArray,
         );
         array__delete(
-            &mut (*self_0).predicates_by_pattern as *mut TSQueryPredicatesByPattern
-                as *mut VoidArray,
-        );
-        array__delete(
-            &mut (*self_0).start_bytes_by_pattern as *mut TSQueryStartBytesByPattern
-                as *mut VoidArray,
+            &mut (*self_0).start_bytes_by_pattern as *mut C2RustUnnamed_4 as *mut VoidArray,
         );
         symbol_table_delete(&mut (*self_0).captures);
         symbol_table_delete(&mut (*self_0).predicate_values);
-        ts_free((*self_0).symbol_map as *mut ffi::c_void);
-        ts_free(self_0 as *mut ffi::c_void);
+        ts_free((*self_0).symbol_map as *mut os::raw::c_void);
+        ts_free(self_0 as *mut os::raw::c_void);
     };
 }
-
-/// Get the number of patterns in the query.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_pattern_count(mut self_0: *const TSQuery) -> u32 {
-    (*self_0).predicates_by_pattern.size
+    return (*self_0).predicates_by_pattern.size;
 }
-
-/// Get the number of captures in the query.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_capture_count(mut self_0: *const TSQuery) -> u32 {
-    (*self_0).captures.slices.size
+    return (*self_0).captures.slices.size;
 }
-
-/// Get the number of string literals in the query.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_string_count(mut self_0: *const TSQuery) -> u32 {
-    (*self_0).predicate_values.slices.size
+    return (*self_0).predicate_values.slices.size;
 }
-
-/// Get the name and length of one of the query's captures. Each capture and
-/// string is associated with a numeric id based on the order that it appeared
-/// in the query's source.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_capture_name_for_id(
     mut self_0: *const TSQuery,
     mut index: u32,
     mut length: *mut u32,
 ) -> *const os::raw::c_char {
-    symbol_table_name_for_id(&(*self_0).captures, index as u16, length)
+    return symbol_table_name_for_id(&(*self_0).captures, index as u16, length);
 }
-
-/// Get one of the query's string literals. Each capture and string is
-/// associated with a numeric id based on the order that it appeared in the
-/// query's source.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_string_value_for_id(
     mut self_0: *const TSQuery,
     mut index: u32,
     mut length: *mut u32,
 ) -> *const os::raw::c_char {
-    symbol_table_name_for_id(&(*self_0).predicate_values, index as u16, length)
+    return symbol_table_name_for_id(&(*self_0).predicate_values, index as u16, length);
 }
-
-/// Get all of the predicates for the given pattern in the query.
-///
-/// The predicates are represented as a single array of steps. There are three
-/// types of steps in this array, which correspond to the three legal values for
-/// the `type` field:
-/// - `TSQueryPredicateStepTypeCapture` - Steps with this type represent names
-///    of captures. Their `value_id` can be used with the
-///   `ts_query_capture_name_for_id` function to obtain the name of the capture.
-/// - `TSQueryPredicateStepTypeString` - Steps with this type represent literal
-///    strings. Their `value_id` can be used with the
-///    `ts_query_string_value_for_id` function to obtain their string value.
-/// - `TSQueryPredicateStepTypeDone` - Steps with this type are *sentinels*
-///    that represent the end of an individual predicate. If a pattern has two
-///    predicates, then there will be two steps with this `type` in the array.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_predicates_for_pattern(
     mut self_0: *const TSQuery,
@@ -1374,32 +1681,21 @@ pub unsafe extern "C" fn ts_query_predicates_for_pattern(
         .contents
         .offset(pattern_index as isize);
     *step_count = slice.length;
-    &mut *(*self_0)
+    return &mut *(*self_0)
         .predicate_steps
         .contents
-        .offset(slice.offset as isize) as *mut TSQueryPredicateStep
+        .offset(slice.offset as isize) as *mut TSQueryPredicateStep;
 }
-
-/// Get the byte offset where the given pattern starts in the query's source.
-///
-/// This can be useful when combining queries by concatenating their source
-/// code strings.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_start_byte_for_pattern(
     mut self_0: *const TSQuery,
     mut pattern_index: u32,
 ) -> u32 {
-    *(*self_0)
+    return *(*self_0)
         .start_bytes_by_pattern
         .contents
-        .offset(pattern_index as isize)
+        .offset(pattern_index as isize);
 }
-
-/// Disable a certain capture within a query.
-///
-/// This prevents the capture from being returned in matches, and also avoids
-/// any resource usage associated with recording the capture. Currently, there
-/// is no way to undo this.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_disable_capture(
     mut self_0: *mut TSQuery,
@@ -1408,7 +1704,7 @@ pub unsafe extern "C" fn ts_query_disable_capture(
 ) {
     // Remove capture information for any pattern step that previously
     // captured with the given name.
-    let mut id: os::raw::c_int = symbol_table_id_for_name(&(*self_0).captures, name, length);
+    let mut id: os::raw::c_int = symbol_table_id_for_name(&mut (*self_0).captures, name, length);
     if id != -(1 as os::raw::c_int) {
         let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
         while i < (*self_0).steps.size {
@@ -1420,11 +1716,6 @@ pub unsafe extern "C" fn ts_query_disable_capture(
         ts_query__finalize_steps(self_0);
     };
 }
-
-/// Disable a certain pattern within a query.
-///
-/// This prevents the pattern from matching and removes most of the overhead
-/// associated with the pattern. Currently, there is no way to undo this.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_disable_pattern(
     mut self_0: *mut TSQuery,
@@ -1438,7 +1729,7 @@ pub unsafe extern "C" fn ts_query_disable_pattern(
             &mut *(*self_0).pattern_map.contents.offset(i as isize) as *mut PatternEntry;
         if (*pattern).pattern_index as os::raw::c_uint == pattern_index {
             array__erase(
-                &mut (*self_0).pattern_map as *mut TSQueryPatternMap as *mut VoidArray,
+                &mut (*self_0).pattern_map as *mut C2RustUnnamed_7 as *mut VoidArray,
                 ::std::mem::size_of::<PatternEntry>(),
                 i,
             );
@@ -1447,89 +1738,80 @@ pub unsafe extern "C" fn ts_query_disable_pattern(
         i = i.wrapping_add(1)
     }
 }
-
-/// Create a new cursor for executing a given query.
-///
-/// The cursor stores the state that is needed to iteratively search
-/// for matches. To use the query cursor, first call `ts_query_cursor_exec`
-/// to start running a given query on a given syntax node. Then, there are
-/// two options for consuming the results of the query:
-/// 1. Repeatedly call `ts_query_cursor_next_match` to iterate over all of the
-///    the *matches* in the order that they were found. Each match contains the
-///    index of the pattern that matched, and an array of captures. Because
-///    multiple patterns can match the same set of nodes, one match may contain
-///    captures that appear *before* some of the captures from a previous match.
-/// 2. Repeatedly call `ts_query_cursor_next_capture` to iterate over all of the
-///    individual *captures* in the order that they appear. This is useful if
-///    don't care about which pattern matched, and just want a single ordered
-///    sequence of captures.
-///
-/// If you don't care about consuming all of the results, you can stop calling
-/// `ts_query_cursor_next_match` or `ts_query_cursor_next_capture` at any point.
-///  You can then start executing another query on another node by calling
-///  `ts_query_cursor_exec` again.
+/* **************
+ * QueryCursor
+ ***************/
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_new() -> *mut TSQueryCursor {
     let mut self_0: *mut TSQueryCursor =
         ts_malloc(::std::mem::size_of::<TSQueryCursor>()) as *mut TSQueryCursor;
-    *self_0 = TSQueryCursor {
-        query: std::ptr::null::<TSQuery>(),
-        cursor: TSTreeCursor {
-            tree: ptr::null(),
-            id: ptr::null(),
-            context: [0; 2],
-        },
-        states: TSQueryCursorStates {
-            contents: std::ptr::null_mut::<QueryState>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        finished_states: TsQueryCursorFinishedStated {
-            contents: std::ptr::null_mut::<QueryState>(),
-            size: 0 as os::raw::c_int as u32,
-            capacity: 0 as os::raw::c_int as u32,
-        },
-        capture_list_pool: capture_list_pool_new(),
-        depth: 0,
-        start_byte: 0 as os::raw::c_int as u32,
-        end_byte: 4_294_967_295 as os::raw::c_uint,
-        next_state_id: 0,
-        start_point: TSPoint {
-            row: 0 as os::raw::c_int as u32,
-            column: 0 as os::raw::c_int as u32,
-        },
-        end_point: TSPoint {
-            row: 4_294_967_295 as os::raw::c_uint,
-            column: 4_294_967_295 as os::raw::c_uint,
-        },
-        ascending: false,
+    *self_0 = {
+        let mut init = TSQueryCursor {
+            query: 0 as *const TSQuery,
+            cursor: TSTreeCursor {
+                tree: 0 as *const os::raw::c_void,
+                id: 0 as *const os::raw::c_void,
+                context: [0; 2],
+            },
+            states: {
+                let mut init = C2RustUnnamed_12 {
+                    contents: 0 as *mut QueryState,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            finished_states: {
+                let mut init = C2RustUnnamed_11 {
+                    contents: 0 as *mut QueryState,
+                    size: 0 as os::raw::c_int as u32,
+                    capacity: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            capture_list_pool: capture_list_pool_new(),
+            depth: 0,
+            start_byte: 0 as os::raw::c_int as u32,
+            end_byte: 4294967295 as os::raw::c_uint,
+            next_state_id: 0,
+            start_point: {
+                let mut init = TSPoint {
+                    row: 0 as os::raw::c_int as u32,
+                    column: 0 as os::raw::c_int as u32,
+                };
+                init
+            },
+            end_point: {
+                let mut init = TSPoint {
+                    row: 4294967295 as os::raw::c_uint,
+                    column: 4294967295 as os::raw::c_uint,
+                };
+                init
+            },
+            ascending: 0 as os::raw::c_int != 0,
+        };
+        init
     };
     array__reserve(
-        &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
+        &mut (*self_0).states as *mut C2RustUnnamed_12 as *mut VoidArray,
         ::std::mem::size_of::<QueryState>(),
-        MAX_STATE_COUNT as u32,
+        256 as os::raw::c_int as u32,
     );
     array__reserve(
-        &mut (*self_0).finished_states as *mut TsQueryCursorFinishedStated as *mut VoidArray,
+        &mut (*self_0).finished_states as *mut C2RustUnnamed_11 as *mut VoidArray,
         ::std::mem::size_of::<QueryState>(),
-        MAX_STATE_COUNT as u32,
+        32 as os::raw::c_int as u32,
     );
-    self_0
+    return self_0;
 }
-
-/// Delete a query cursor, freeing all of the memory that it used.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_delete(mut self_0: *mut TSQueryCursor) {
-    array__delete(&mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray);
-    array__delete(
-        &mut (*self_0).finished_states as *mut TsQueryCursorFinishedStated as *mut VoidArray,
-    );
+    array__delete(&mut (*self_0).states as *mut C2RustUnnamed_12 as *mut VoidArray);
+    array__delete(&mut (*self_0).finished_states as *mut C2RustUnnamed_11 as *mut VoidArray);
     ts_tree_cursor_delete(&mut (*self_0).cursor);
     capture_list_pool_delete(&mut (*self_0).capture_list_pool);
-    ts_free(self_0 as *mut ffi::c_void);
+    ts_free(self_0 as *mut os::raw::c_void);
 }
-
-/// Start running a given query on a given node.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_exec(
     mut self_0: *mut TSQueryCursor,
@@ -1539,14 +1821,12 @@ pub unsafe extern "C" fn ts_query_cursor_exec(
     (*self_0).states.size = 0 as os::raw::c_int as u32;
     (*self_0).finished_states.size = 0 as os::raw::c_int as u32;
     ts_tree_cursor_reset(&mut (*self_0).cursor, node);
-    capture_list_pool_reset(&mut (*self_0).capture_list_pool, (*query).max_capture_count);
+    capture_list_pool_reset(&mut (*self_0).capture_list_pool);
     (*self_0).next_state_id = 0 as os::raw::c_int as u32;
     (*self_0).depth = 0 as os::raw::c_int as u32;
-    (*self_0).ascending = false;
+    (*self_0).ascending = 0 as os::raw::c_int != 0;
     (*self_0).query = query;
 }
-
-/// Set the range of bytes in which the query will be executed.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_set_byte_range(
     mut self_0: *mut TSQueryCursor,
@@ -1555,13 +1835,11 @@ pub unsafe extern "C" fn ts_query_cursor_set_byte_range(
 ) {
     if end_byte == 0 as os::raw::c_int as os::raw::c_uint {
         start_byte = 0 as os::raw::c_int as u32;
-        end_byte = 4_294_967_295 as os::raw::c_uint
+        end_byte = 4294967295 as os::raw::c_uint
     }
     (*self_0).start_byte = start_byte;
     (*self_0).end_byte = end_byte;
 }
-
-/// Set the (row, column) positions in which the query will be executed.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_set_point_range(
     mut self_0: *mut TSQueryCursor,
@@ -1571,13 +1849,19 @@ pub unsafe extern "C" fn ts_query_cursor_set_point_range(
     if end_point.row == 0 as os::raw::c_int as os::raw::c_uint
         && end_point.column == 0 as os::raw::c_int as os::raw::c_uint
     {
-        start_point = TSPoint {
-            row: 0 as os::raw::c_int as u32,
-            column: 0 as os::raw::c_int as u32,
+        start_point = {
+            let mut init = TSPoint {
+                row: 0 as os::raw::c_int as u32,
+                column: 0 as os::raw::c_int as u32,
+            };
+            init
         };
-        end_point = TSPoint {
-            row: 4_294_967_295 as os::raw::c_uint,
-            column: 4_294_967_295 as os::raw::c_uint,
+        end_point = {
+            let mut init = TSPoint {
+                row: 4294967295 as os::raw::c_uint,
+                column: 4294967295 as os::raw::c_uint,
+            };
+            init
         }
     }
     (*self_0).start_point = start_point;
@@ -1591,22 +1875,26 @@ unsafe extern "C" fn ts_query_cursor__first_in_progress_capture(
     mut byte_offset: *mut u32,
     mut pattern_index: *mut u32,
 ) -> bool {
-    let mut result: bool = false;
+    let mut result: bool = 0 as os::raw::c_int != 0;
+    *state_index = 4294967295 as os::raw::c_uint;
+    *byte_offset = 4294967295 as os::raw::c_uint;
+    *pattern_index = 4294967295 as os::raw::c_uint;
     let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
     while i < (*self_0).states.size {
         let mut state: *const QueryState =
             &mut *(*self_0).states.contents.offset(i as isize) as *mut QueryState;
-        if (*state).capture_count as os::raw::c_int > 0 as os::raw::c_int {
-            let mut captures: *const TSQueryCapture =
-                capture_list_pool_get(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
-            let mut capture_byte: u32 =
-                ts_node_start_byte((*captures.offset(0 as os::raw::c_int as isize)).node);
+        let mut captures: *const CaptureList =
+            capture_list_pool_get(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
+        if (*captures).size > 0 as os::raw::c_int as os::raw::c_uint {
+            let mut capture_byte: u32 = ts_node_start_byte(
+                (*(*captures).contents.offset(0 as os::raw::c_int as isize)).node,
+            );
             if !result
                 || capture_byte < *byte_offset
                 || capture_byte == *byte_offset
                     && ((*state).pattern_index as os::raw::c_uint) < *pattern_index
             {
-                result = true;
+                result = 1 as os::raw::c_int != 0;
                 *state_index = i;
                 *byte_offset = capture_byte;
                 *pattern_index = (*state).pattern_index as u32
@@ -1614,90 +1902,174 @@ unsafe extern "C" fn ts_query_cursor__first_in_progress_capture(
         }
         i = i.wrapping_add(1)
     }
-    result
+    return result;
 }
-unsafe extern "C" fn ts_query__cursor_add_state(
+// Determine which node is first in a depth-first traversal
+#[no_mangle]
+pub unsafe extern "C" fn ts_query_cursor__compare_nodes(
+    mut left: TSNode,
+    mut right: TSNode,
+) -> os::raw::c_int {
+    if left.id != right.id {
+        let mut left_start: u32 = ts_node_start_byte(left);
+        let mut right_start: u32 = ts_node_start_byte(right);
+        if left_start < right_start {
+            return -(1 as os::raw::c_int);
+        }
+        if left_start > right_start {
+            return 1 as os::raw::c_int;
+        }
+        let mut left_node_count: u32 = ts_node_end_byte(left);
+        let mut right_node_count: u32 = ts_node_end_byte(right);
+        if left_node_count > right_node_count {
+            return -(1 as os::raw::c_int);
+        }
+        if left_node_count < right_node_count {
+            return 1 as os::raw::c_int;
+        }
+    }
+    return 0 as os::raw::c_int;
+}
+// Determine if either state contains a superset of the other state's captures.
+#[no_mangle]
+pub unsafe extern "C" fn ts_query_cursor__compare_captures(
+    mut self_0: *mut TSQueryCursor,
+    mut left_state: *mut QueryState,
+    mut right_state: *mut QueryState,
+    mut left_contains_right: *mut bool,
+    mut right_contains_left: *mut bool,
+) {
+    let mut left_captures: *const CaptureList = capture_list_pool_get(
+        &mut (*self_0).capture_list_pool,
+        (*left_state).capture_list_id,
+    );
+    let mut right_captures: *const CaptureList = capture_list_pool_get(
+        &mut (*self_0).capture_list_pool,
+        (*right_state).capture_list_id,
+    );
+    *left_contains_right = 1 as os::raw::c_int != 0;
+    *right_contains_left = 1 as os::raw::c_int != 0;
+    let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+    let mut j: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+    loop {
+        if i < (*left_captures).size {
+            if j < (*right_captures).size {
+                let mut left: *mut TSQueryCapture =
+                    &mut *(*left_captures).contents.offset(i as isize) as *mut TSQueryCapture;
+                let mut right: *mut TSQueryCapture =
+                    &mut *(*right_captures).contents.offset(j as isize) as *mut TSQueryCapture;
+                if (*left).node.id == (*right).node.id && (*left).index == (*right).index {
+                    i = i.wrapping_add(1);
+                    j = j.wrapping_add(1)
+                } else {
+                    match ts_query_cursor__compare_nodes((*left).node, (*right).node) {
+                        -1 => {
+                            *right_contains_left = 0 as os::raw::c_int != 0;
+                            i = i.wrapping_add(1)
+                        }
+                        1 => {
+                            *left_contains_right = 0 as os::raw::c_int != 0;
+                            j = j.wrapping_add(1)
+                        }
+                        _ => {
+                            *right_contains_left = 0 as os::raw::c_int != 0;
+                            *left_contains_right = 0 as os::raw::c_int != 0;
+                            i = i.wrapping_add(1);
+                            j = j.wrapping_add(1)
+                        }
+                    }
+                }
+            } else {
+                *right_contains_left = 0 as os::raw::c_int != 0;
+                break;
+            }
+        } else {
+            if j < (*right_captures).size {
+                *left_contains_right = 0 as os::raw::c_int != 0
+            }
+            break;
+        }
+    }
+}
+unsafe extern "C" fn ts_query_cursor__add_state(
     mut self_0: *mut TSQueryCursor,
     mut pattern: *const PatternEntry,
 ) -> bool {
-    let mut list_id: u32 = capture_list_pool_acquire(&mut (*self_0).capture_list_pool) as u32;
-    // If there are no capture lists left in the pool, then terminate whichever
-    // state has captured the earliest node in the document, and steal its
-    // capture list.
-    if list_id == NONE as os::raw::c_uint {
-        let mut state_index: u32 = 0;
-        let mut byte_offset: u32 = 0;
-        let mut pattern_index: u32 = 0;
-        if ts_query_cursor__first_in_progress_capture(
-            self_0,
-            &mut state_index,
-            &mut byte_offset,
-            &mut pattern_index,
-        ) {
-            list_id =
-                (*(*self_0).states.contents.offset(state_index as isize)).capture_list_id as u32;
-            array__erase(
-                &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
-                ::std::mem::size_of::<QueryState>(),
-                state_index,
-            );
-        } else {
-            return false;
-        }
+    if (*self_0).states.size >= 256 as os::raw::c_int as os::raw::c_uint {
+        return 0 as os::raw::c_int != 0;
     }
+    let mut step: *mut QueryStep = &mut *(*(*self_0).query)
+        .steps
+        .contents
+        .offset((*pattern).step_index as isize)
+        as *mut QueryStep;
     array__grow(
-        &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
+        &mut (*self_0).states as *mut C2RustUnnamed_12 as *mut VoidArray,
         1 as os::raw::c_int as usize,
         ::std::mem::size_of::<QueryState>(),
     );
-    let fresh18 = (*self_0).states.size;
+    let fresh24 = (*self_0).states.size;
     (*self_0).states.size = (*self_0).states.size.wrapping_add(1);
-    *(*self_0).states.contents.offset(fresh18 as isize) = QueryState {
-        start_depth: (*self_0).depth as u16,
-        pattern_index: (*pattern).pattern_index,
-        step_index: (*pattern).step_index,
-        capture_count: 0 as os::raw::c_int as u16,
-        capture_list_id: list_id as u16,
-        consumed_capture_count: 0 as os::raw::c_int as u16,
-        id: 0,
+    *(*self_0).states.contents.offset(fresh24 as isize) = {
+        let mut init = QueryState {
+            consumed_capture_count_seeking_immediate_match_has_in_progress_alternatives: [0; 2],
+            c2rust_padding: [0; 2],
+            id: 0,
+            start_depth: (*self_0)
+                .depth
+                .wrapping_sub((*step).depth as os::raw::c_uint) as u16,
+            step_index: (*pattern).step_index,
+            pattern_index: (*pattern).pattern_index,
+            capture_list_id: NONE,
+        };
+        init.set_consumed_capture_count(0 as os::raw::c_int as u16);
+        init.set_seeking_immediate_match(0 as os::raw::c_int != 0);
+        init.set_has_in_progress_alternatives(false);
+        init
     };
-    true
+    return 1 as os::raw::c_int != 0;
 }
+// Duplicate the given state and insert the newly-created state immediately after
+// the given state in the `states` array.
 unsafe extern "C" fn ts_query__cursor_copy_state(
     mut self_0: *mut TSQueryCursor,
     mut state: *const QueryState,
 ) -> *mut QueryState {
-    let mut new_list_id: u32 = capture_list_pool_acquire(&mut (*self_0).capture_list_pool) as u32;
-    if new_list_id == NONE as os::raw::c_uint {
-        return std::ptr::null_mut::<QueryState>();
+    if (*self_0).states.size >= 256 as os::raw::c_int as os::raw::c_uint {
+        return 0 as *mut QueryState;
     }
-    array__grow(
-        &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
-        1 as os::raw::c_int as usize,
+    // If the state has captures, copy its capture list.
+    let mut copy: QueryState = *state;
+    copy.capture_list_id = (*state).capture_list_id;
+    if (*state).capture_list_id as os::raw::c_int != NONE as os::raw::c_int {
+        copy.capture_list_id = capture_list_pool_acquire(&mut (*self_0).capture_list_pool);
+        if copy.capture_list_id as os::raw::c_int == NONE as os::raw::c_int {
+            return 0 as *mut QueryState;
+        }
+        let mut old_captures: *const CaptureList =
+            capture_list_pool_get(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
+        let mut new_captures: *mut CaptureList =
+            capture_list_pool_get_mut(&mut (*self_0).capture_list_pool, copy.capture_list_id);
+        array__splice(
+            new_captures as *mut VoidArray,
+            ::std::mem::size_of::<TSQueryCapture>(),
+            (*new_captures).size,
+            0 as os::raw::c_int as u32,
+            (*old_captures).size,
+            (*old_captures).contents as *const os::raw::c_void,
+        );
+    }
+    let mut index: u32 = (state.wrapping_offset_from_((*self_0).states.contents) as os::raw::c_long
+        + 1 as os::raw::c_int as os::raw::c_long) as u32;
+    array__splice(
+        &mut (*self_0).states as *mut C2RustUnnamed_12 as *mut VoidArray,
         ::std::mem::size_of::<QueryState>(),
+        index,
+        0 as os::raw::c_int as u32,
+        1 as os::raw::c_int as u32,
+        &mut copy as *mut QueryState as *const os::raw::c_void,
     );
-    let fresh19 = (*self_0).states.size;
-    (*self_0).states.size = (*self_0).states.size.wrapping_add(1);
-    *(*self_0).states.contents.offset(fresh19 as isize) = *state;
-    assert!(
-        (*self_0)
-            .states
-            .size
-            .wrapping_sub(1 as os::raw::c_int as os::raw::c_uint)
-            < (*self_0).states.size
-    );
-    let mut new_state: *mut QueryState = &mut *(*self_0)
-        .states
-        .contents
-        .offset((*self_0).states.size.wrapping_sub(1) as isize)
-        as *mut QueryState;
-    (*new_state).capture_list_id = new_list_id as u16;
-    let mut old_captures: *mut TSQueryCapture =
-        capture_list_pool_get(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
-    let mut new_captures: *mut TSQueryCapture =
-        capture_list_pool_get(&mut (*self_0).capture_list_pool, new_list_id as u16);
-    copy_nonoverlapping(old_captures, new_captures, (*state).capture_count as usize);
-    new_state
+    return &mut *(*self_0).states.contents.offset(index as isize) as *mut QueryState;
 }
 // Walk the tree, processing patterns until at least one pattern finishes,
 // If one or more patterns finish, return `true` and store their states in the
@@ -1707,9 +2079,18 @@ unsafe extern "C" fn ts_query__cursor_copy_state(
 unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) -> bool {
     loop {
         if (*self_0).ascending {
-            // When leaving a node, remove any unfinished states whose next step
-            // needed to match something within that node.
+            // Leave this node by stepping to its next sibling or to its parent.
+            let mut did_move: bool = 1 as os::raw::c_int != 0;
+            if ts_tree_cursor_goto_next_sibling(&mut (*self_0).cursor) {
+                (*self_0).ascending = 0 as os::raw::c_int != 0
+            } else if ts_tree_cursor_goto_parent(&mut (*self_0).cursor) {
+                (*self_0).depth = (*self_0).depth.wrapping_sub(1)
+            } else {
+                did_move = 0 as os::raw::c_int != 0
+            }
+            // After leaving a node, remove any states that cannot make further progress.
             let mut deleted_count: u32 = 0 as os::raw::c_int as u32;
+            let mut current_block_18: u64;
             let mut i: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
             let mut n: os::raw::c_uint = (*self_0).states.size;
             while i < n {
@@ -1720,54 +2101,68 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                     .contents
                     .offset((*state).step_index as isize)
                     as *mut QueryStep;
-                if ((*state).start_depth as u32).wrapping_add((*step).depth() as u32)
+                // If a state completed its pattern inside of this node, but was deferred from finishing
+                // in order to search for longer matches, mark it as finished.
+                if (*step).depth as os::raw::c_int == PATTERN_DONE_MARKER as os::raw::c_int {
+                    if (*state).start_depth as os::raw::c_uint > (*self_0).depth || !did_move {
+                        let fresh25 = (*self_0).next_state_id;
+                        (*self_0).next_state_id = (*self_0).next_state_id.wrapping_add(1);
+                        (*state).id = fresh25;
+                        array__grow(
+                            &mut (*self_0).finished_states as *mut C2RustUnnamed_11
+                                as *mut VoidArray,
+                            1 as os::raw::c_int as usize,
+                            ::std::mem::size_of::<QueryState>(),
+                        );
+                        let fresh26 = (*self_0).finished_states.size;
+                        (*self_0).finished_states.size =
+                            (*self_0).finished_states.size.wrapping_add(1);
+                        *(*self_0).finished_states.contents.offset(fresh26 as isize) = *state;
+                        deleted_count = deleted_count.wrapping_add(1);
+                        current_block_18 = 5399440093318478209;
+                    } else {
+                        current_block_18 = 15768484401365413375;
+                    }
+                } else if ((*state).start_depth as u32).wrapping_add((*step).depth as u32)
                     > (*self_0).depth
                 {
                     capture_list_pool_release(
                         &mut (*self_0).capture_list_pool,
                         (*state).capture_list_id,
                     );
-                    deleted_count = deleted_count.wrapping_add(1)
-                } else if deleted_count > 0 as os::raw::c_int as os::raw::c_uint {
-                    *(*self_0)
-                        .states
-                        .contents
-                        .offset(i.wrapping_sub(deleted_count) as isize) = *state
+                    deleted_count = deleted_count.wrapping_add(1);
+                    current_block_18 = 5399440093318478209;
+                } else {
+                    current_block_18 = 15768484401365413375;
+                }
+                match current_block_18 {
+                    15768484401365413375 => {
+                        if deleted_count > 0 as os::raw::c_int as os::raw::c_uint {
+                            *(*self_0)
+                                .states
+                                .contents
+                                .offset(i.wrapping_sub(deleted_count) as isize) = *state
+                        }
+                    }
+                    _ => {}
                 }
                 i = i.wrapping_add(1)
             }
             (*self_0).states.size = ((*self_0).states.size as os::raw::c_uint)
                 .wrapping_sub(deleted_count) as u32 as u32;
-            if ts_tree_cursor_goto_next_sibling(&mut (*self_0).cursor) {
-                (*self_0).ascending = false
-            } else if ts_tree_cursor_goto_parent(&mut (*self_0).cursor) {
-                (*self_0).depth = (*self_0).depth.wrapping_sub(1)
-            } else {
+            if !did_move {
                 return (*self_0).finished_states.size > 0 as os::raw::c_int as os::raw::c_uint;
             }
         } else {
-            let mut has_later_siblings: bool = false;
-            let mut can_have_later_siblings_with_this_field: bool = false;
-            let mut field_id: TSFieldId = ts_tree_cursor_current_status(
-                &(*self_0).cursor,
-                &mut has_later_siblings,
-                &mut can_have_later_siblings_with_this_field,
-            );
-            let mut node: TSNode = ts_tree_cursor_current_node(&(*self_0).cursor);
-            let mut symbol: TSSymbol = ts_node_symbol(node);
-            let mut is_named: bool = ts_node_is_named(node);
-            if symbol as os::raw::c_int != -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int
-                && !(*(*self_0).query).symbol_map.is_null()
-            {
-                symbol = *(*(*self_0).query).symbol_map.offset(symbol as isize)
-            }
-            // If this node is before the selected range, then avoid descending
-            // into it.
+            // If a state needed to match something within this node, then remove that state
+            // as it has failed to match.
+            // If this node is before the selected range, then avoid descending into it.
+            let mut node: TSNode = ts_tree_cursor_current_node(&mut (*self_0).cursor);
             if ts_node_end_byte(node) <= (*self_0).start_byte
                 || point_lte(ts_node_end_point(node), (*self_0).start_point) as os::raw::c_int != 0
             {
                 if !ts_tree_cursor_goto_next_sibling(&mut (*self_0).cursor) {
-                    (*self_0).ascending = true
+                    (*self_0).ascending = 1 as os::raw::c_int != 0
                 }
             } else {
                 // If this node is after the selected range, then stop walking.
@@ -1775,8 +2170,23 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                     || point_lte((*self_0).end_point, ts_node_start_point(node)) as os::raw::c_int
                         != 0
                 {
-                    return false;
+                    return 0 as os::raw::c_int != 0;
                 }
+                // Get the properties of the current node.
+                let mut symbol: TSSymbol = ts_node_symbol(node);
+                let mut is_named: bool = ts_node_is_named(node);
+                if symbol as os::raw::c_int != -(1 as os::raw::c_int) as TSSymbol as os::raw::c_int
+                    && !(*(*self_0).query).symbol_map.is_null()
+                {
+                    symbol = *(*(*self_0).query).symbol_map.offset(symbol as isize)
+                }
+                let mut can_have_later_siblings: bool = false;
+                let mut can_have_later_siblings_with_this_field: bool = false;
+                let mut field_id: TSFieldId = ts_tree_cursor_current_status(
+                    &mut (*self_0).cursor,
+                    &mut can_have_later_siblings,
+                    &mut can_have_later_siblings_with_this_field,
+                );
                 // Add new states for any patterns whose root node is a wildcard.
                 let mut i_0: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
                 while i_0 < (*(*self_0).query).wildcard_root_pattern_count as os::raw::c_uint {
@@ -1790,11 +2200,12 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                         as *mut QueryStep;
                     // If this node matches the first step of the pattern, then add a new
                     // state at the start of this pattern.
-                    if ((*step_0).field as os::raw::c_int == 0
-                        || field_id as os::raw::c_int == (*step_0).field as os::raw::c_int)
-                        && !ts_query__cursor_add_state(self_0, pattern)
+                    if !((*step_0).field as os::raw::c_int != 0
+                        && field_id as os::raw::c_int != (*step_0).field as os::raw::c_int)
                     {
-                        break;
+                        if !ts_query_cursor__add_state(self_0, pattern) {
+                            break;
+                        }
                     }
                     i_0 = i_0.wrapping_add(1)
                 }
@@ -1816,7 +2227,7 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                         if !((*step_1).field as os::raw::c_int != 0
                             && field_id as os::raw::c_int != (*step_1).field as os::raw::c_int)
                         {
-                            if !ts_query__cursor_add_state(self_0, pattern_0) {
+                            if !ts_query_cursor__add_state(self_0, pattern_0) {
                                 break;
                             }
                             // Advance to the next pattern whose root node matches this node.
@@ -1833,15 +2244,16 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                                 .offset((*pattern_0).step_index as isize)
                                 as *mut QueryStep
                         }
-                        if (*step_1).symbol as os::raw::c_int != symbol as os::raw::c_int {
+                        if !((*step_1).symbol as os::raw::c_int == symbol as os::raw::c_int) {
                             break;
                         }
                     }
                 }
+                let mut current_block_103: u64;
                 // Update all of the in-progress states with current node.
                 let mut i_2: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
-                let mut n_0: os::raw::c_uint = (*self_0).states.size;
-                while i_2 < n_0 {
+                let mut copy_count: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+                while i_2 < (*self_0).states.size {
                     let mut state_0: *mut QueryState =
                         &mut *(*self_0).states.contents.offset(i_2 as isize) as *mut QueryState;
                     let mut step_2: *mut QueryStep = &mut *(*(*self_0).query)
@@ -1849,10 +2261,12 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                         .contents
                         .offset((*state_0).step_index as isize)
                         as *mut QueryStep;
+                    (*state_0).set_has_in_progress_alternatives(0 as os::raw::c_int != 0);
+                    copy_count = 0 as os::raw::c_int as os::raw::c_uint;
                     // Check that the node matches all of the criteria for the next
                     // step of the pattern.
-                    if ((*state_0).start_depth as u32).wrapping_add((*step_2).depth() as u32)
-                        == (*self_0).depth
+                    if !(((*state_0).start_depth as u32).wrapping_add((*step_2).depth as u32)
+                        != (*self_0).depth)
                     {
                         // Determine if this node matches this step of the pattern, and also
                         // if this node can have later siblings that match this step of the
@@ -1864,26 +2278,28 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                             || (*step_2).symbol as os::raw::c_int
                                 == NAMED_WILDCARD_SYMBOL as os::raw::c_int
                                 && is_named as os::raw::c_int != 0;
-                        let mut later_sibling_can_match: bool = has_later_siblings;
+                        let mut later_sibling_can_match: bool = can_have_later_siblings;
                         if (*step_2).is_immediate() as os::raw::c_int != 0
                             && is_named as os::raw::c_int != 0
+                            || (*state_0).seeking_immediate_match() as os::raw::c_int != 0
                         {
-                            later_sibling_can_match = false
+                            later_sibling_can_match = 0 as os::raw::c_int != 0
                         }
-                        if (*step_2).is_last() as os::raw::c_int != 0
-                            && has_later_siblings as os::raw::c_int != 0
+                        if (*step_2).is_last_child() as os::raw::c_int != 0
+                            && can_have_later_siblings as os::raw::c_int != 0
                         {
-                            node_does_match = false
+                            node_does_match = 0 as os::raw::c_int != 0
                         }
                         if (*step_2).field != 0 {
                             if (*step_2).field as os::raw::c_int == field_id as os::raw::c_int {
                                 if !can_have_later_siblings_with_this_field {
-                                    later_sibling_can_match = false
+                                    later_sibling_can_match = 0 as os::raw::c_int != 0
                                 }
                             } else {
-                                node_does_match = false
+                                node_does_match = 0 as os::raw::c_int != 0
                             }
                         }
+                        // Remove states immediately if it is ever clear that they cannot match.
                         if !node_does_match {
                             if !later_sibling_can_match {
                                 capture_list_pool_release(
@@ -1891,124 +2307,331 @@ unsafe extern "C" fn ts_query_cursor__advance(mut self_0: *mut TSQueryCursor) ->
                                     (*state_0).capture_list_id,
                                 );
                                 array__erase(
-                                    &mut (*self_0).states as *mut TSQueryCursorStates
+                                    &mut (*self_0).states as *mut C2RustUnnamed_12
                                         as *mut VoidArray,
                                     ::std::mem::size_of::<QueryState>(),
                                     i_2,
                                 );
-                                i_2 = i_2.wrapping_sub(1);
-                                n_0 = n_0.wrapping_sub(1)
+                                i_2 = i_2.wrapping_sub(1)
                             }
                         } else {
-                            // Some patterns can match their root node in multiple ways,
-                            // capturing different children. If this pattern step could match
-                            // later children within the same parent, then this query state
-                            // cannot simply be updated in place. It must be split into two
-                            // states: one that matches this node, and one which skips over
-                            // this node, to preserve the possibility of matching later
-                            // siblings.
-                            let mut next_state: *mut QueryState = state_0;
-                            if (*step_2).depth() as os::raw::c_int > 0 as os::raw::c_int
+                            // Some patterns can match their root node in multiple ways, capturing different
+                            // children. If this pattern step could match later children within the same
+                            // parent, then this query state cannot simply be updated in place. It must be
+                            // split into two states: one that matches this node, and one which skips over
+                            // this node, to preserve the possibility of matching later siblings.
+                            if later_sibling_can_match as os::raw::c_int != 0
+                                && !(*step_2).is_pattern_start()
                                 && (*step_2).contains_captures() as os::raw::c_int != 0
-                                && later_sibling_can_match as os::raw::c_int != 0
                             {
-                                let mut copy: *mut QueryState =
-                                    ts_query__cursor_copy_state(self_0, state_0);
-                                if !copy.is_null() {
-                                    next_state = copy
+                                if !ts_query__cursor_copy_state(self_0, state_0).is_null() {
+                                    copy_count = copy_count.wrapping_add(1)
                                 }
                             }
-                            // If the current node is captured in this pattern, add it to the
-                            // capture list.
-                            let mut j: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
-                            while j < 4 as os::raw::c_int as os::raw::c_uint {
-                                let mut capture_id: u16 = (*step_2).capture_ids[j as usize];
-                                if (*step_2).capture_ids[j as usize] as os::raw::c_int
+                            // If the current node is captured in this pattern, add it to the capture list.
+                            // For the first capture in a pattern, lazily acquire a capture list.
+                            if (*step_2).capture_ids[0 as os::raw::c_int as usize] as os::raw::c_int
+                                != NONE as os::raw::c_int
+                            {
+                                if (*state_0).capture_list_id as os::raw::c_int
                                     == NONE as os::raw::c_int
                                 {
-                                    break;
-                                }
-                                let mut capture_list: *mut TSQueryCapture = capture_list_pool_get(
-                                    &mut (*self_0).capture_list_pool,
-                                    (*next_state).capture_list_id,
-                                );
-                                let fresh20 = (*next_state).capture_count;
-                                (*next_state).capture_count =
-                                    (*next_state).capture_count.wrapping_add(1);
-                                *capture_list.offset(fresh20 as isize) = TSQueryCapture {
-                                    node,
-                                    index: capture_id as u32,
-                                };
-                                j = j.wrapping_add(1)
-                            }
-                            // If the pattern is now done, then remove it from the list of
-                            // in-progress states, and add it to the list of finished states.
-                            (*next_state).step_index = (*next_state).step_index.wrapping_add(1);
-                            let mut next_step: *mut QueryStep =
-                                step_2.offset(1 as os::raw::c_int as isize);
-                            if (*next_step).depth() as os::raw::c_int
-                                == PATTERN_DONE_MARKER as os::raw::c_int
-                            {
-                                let fresh21 = (*self_0).next_state_id;
-                                (*self_0).next_state_id = (*self_0).next_state_id.wrapping_add(1);
-                                (*next_state).id = fresh21;
-                                array__grow(
-                                    &mut (*self_0).finished_states
-                                        as *mut TsQueryCursorFinishedStated
-                                        as *mut VoidArray,
-                                    1 as os::raw::c_int as usize,
-                                    ::std::mem::size_of::<QueryState>(),
-                                );
-                                let fresh22 = (*self_0).finished_states.size;
-                                (*self_0).finished_states.size =
-                                    (*self_0).finished_states.size.wrapping_add(1);
-                                *(*self_0).finished_states.contents.offset(fresh22 as isize) =
-                                    *next_state;
-                                if next_state == state_0 {
-                                    array__erase(
-                                        &mut (*self_0).states as *mut TSQueryCursorStates
-                                            as *mut VoidArray,
-                                        ::std::mem::size_of::<QueryState>(),
-                                        i_2,
-                                    );
-                                    i_2 = i_2.wrapping_sub(1);
-                                    n_0 = n_0.wrapping_sub(1)
+                                    (*state_0).capture_list_id =
+                                        capture_list_pool_acquire(&mut (*self_0).capture_list_pool);
+                                    // If there are no capture lists left in the pool, then terminate whichever
+                                    // state has captured the earliest node in the document, and steal its
+                                    // capture list.
+                                    if (*state_0).capture_list_id as os::raw::c_int
+                                        == NONE as os::raw::c_int
+                                    {
+                                        let mut state_index: u32 = 0;
+                                        let mut byte_offset: u32 = 0;
+                                        let mut pattern_index: u32 = 0;
+                                        if ts_query_cursor__first_in_progress_capture(
+                                            self_0,
+                                            &mut state_index,
+                                            &mut byte_offset,
+                                            &mut pattern_index,
+                                        ) {
+                                            (*state_0).capture_list_id = (*(*self_0)
+                                                .states
+                                                .contents
+                                                .offset(state_index as isize))
+                                            .capture_list_id;
+                                            array__erase(
+                                                &mut (*self_0).states as *mut C2RustUnnamed_12
+                                                    as *mut VoidArray,
+                                                ::std::mem::size_of::<QueryState>(),
+                                                state_index,
+                                            );
+                                            if state_index < i_2 {
+                                                i_2 = i_2.wrapping_sub(1);
+                                                state_0 = state_0.offset(-1)
+                                            }
+                                            current_block_103 = 8304106758420804164;
+                                        } else {
+                                            array__erase(
+                                                &mut (*self_0).states as *mut C2RustUnnamed_12
+                                                    as *mut VoidArray,
+                                                ::std::mem::size_of::<QueryState>(),
+                                                i_2,
+                                            );
+                                            i_2 = i_2.wrapping_sub(1);
+                                            current_block_103 = 317151059986244064;
+                                        }
+                                    } else {
+                                        current_block_103 = 8304106758420804164;
+                                    }
                                 } else {
-                                    (*self_0).states.size = (*self_0).states.size.wrapping_sub(1)
+                                    current_block_103 = 8304106758420804164;
+                                }
+                                match current_block_103 {
+                                    317151059986244064 => {}
+                                    _ => {
+                                        let mut capture_list: *mut CaptureList =
+                                            capture_list_pool_get_mut(
+                                                &mut (*self_0).capture_list_pool,
+                                                (*state_0).capture_list_id,
+                                            );
+                                        let mut j: os::raw::c_uint =
+                                            0 as os::raw::c_int as os::raw::c_uint;
+                                        while j < 3 as os::raw::c_int as os::raw::c_uint {
+                                            let mut capture_id: u16 =
+                                                (*step_2).capture_ids[j as usize];
+                                            if (*step_2).capture_ids[j as usize] as os::raw::c_int
+                                                == NONE as os::raw::c_int
+                                            {
+                                                break;
+                                            }
+                                            array__grow(
+                                                capture_list as *mut VoidArray,
+                                                1 as os::raw::c_int as usize,
+                                                ::std::mem::size_of::<TSQueryCapture>(),
+                                            );
+                                            let fresh27 = (*capture_list).size;
+                                            (*capture_list).size =
+                                                (*capture_list).size.wrapping_add(1);
+                                            *(*capture_list).contents.offset(fresh27 as isize) = {
+                                                let mut init = TSQueryCapture {
+                                                    node: node,
+                                                    index: capture_id as u32,
+                                                };
+                                                init
+                                            };
+                                            j = j.wrapping_add(1)
+                                        }
+                                        current_block_103 = 1069630499025798221;
+                                    }
+                                }
+                            } else {
+                                current_block_103 = 1069630499025798221;
+                            }
+                            match current_block_103 {
+                                317151059986244064 => {}
+                                _ => {
+                                    // Advance this state to the next step of its pattern.
+                                    (*state_0).step_index = (*state_0).step_index.wrapping_add(1);
+                                    (*state_0)
+                                        .set_seeking_immediate_match(0 as os::raw::c_int != 0);
+                                    // If this state's next step has an 'alternative' step (the step is either optional,
+                                    // or is the end of a repetition), then copy the state in order to pursue both
+                                    // alternatives. The alternative step itself may have an alternative, so this is
+                                    // an interative process.
+                                    let mut end_index: os::raw::c_uint =
+                                        i_2.wrapping_add(1 as os::raw::c_int as os::raw::c_uint);
+                                    let mut j_0: os::raw::c_uint = i_2;
+                                    while j_0 < end_index {
+                                        let mut state_1: *mut QueryState =
+                                            &mut *(*self_0).states.contents.offset(j_0 as isize)
+                                                as *mut QueryState;
+                                        let mut next_step: *mut QueryStep = &mut *(*(*self_0).query)
+                                            .steps
+                                            .contents
+                                            .offset((*state_1).step_index as isize)
+                                            as *mut QueryStep;
+                                        if (*next_step).alternative_index as os::raw::c_int
+                                            != NONE as os::raw::c_int
+                                        {
+                                            if (*next_step).is_dead_end() {
+                                                (*state_1).step_index =
+                                                    (*next_step).alternative_index;
+                                                j_0 = j_0.wrapping_sub(1)
+                                            } else {
+                                                let mut copy: *mut QueryState =
+                                                    ts_query__cursor_copy_state(self_0, state_1);
+                                                if (*next_step).is_pass_through() {
+                                                    (*state_1).step_index =
+                                                        (*state_1).step_index.wrapping_add(1);
+                                                    j_0 = j_0.wrapping_sub(1)
+                                                }
+                                                if !copy.is_null() {
+                                                    copy_count = copy_count.wrapping_add(1);
+                                                    end_index = end_index.wrapping_add(1);
+                                                    (*copy).step_index =
+                                                        (*next_step).alternative_index;
+                                                    if (*next_step).alternative_is_immediate() {
+                                                        (*copy).set_seeking_immediate_match(
+                                                            1 as os::raw::c_int != 0,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        j_0 = j_0.wrapping_add(1)
+                                    }
                                 }
                             }
                         }
                     }
-                    i_2 = i_2.wrapping_add(1)
+                    i_2 = i_2.wrapping_add(
+                        (1 as os::raw::c_int as os::raw::c_uint).wrapping_add(copy_count),
+                    )
+                }
+                let mut i_3: os::raw::c_uint = 0 as os::raw::c_int as os::raw::c_uint;
+                while i_3 < (*self_0).states.size {
+                    let mut state_2: *mut QueryState =
+                        &mut *(*self_0).states.contents.offset(i_3 as isize) as *mut QueryState;
+                    let mut did_remove: bool = 0 as os::raw::c_int != 0;
+                    let mut current_block_115: u64;
+                    // Enfore the longest-match criteria. When a query pattern contains optional or
+                    // repeated nodes, this is necesssary to avoid multiple redundant states, where
+                    // one state has a strict subset of another state's captures.
+                    let mut j_1: os::raw::c_uint =
+                        i_3.wrapping_add(1 as os::raw::c_int as os::raw::c_uint);
+                    while j_1 < (*self_0).states.size {
+                        let mut other_state: *mut QueryState =
+                            &mut *(*self_0).states.contents.offset(j_1 as isize) as *mut QueryState;
+                        if (*state_2).pattern_index as os::raw::c_int
+                            == (*other_state).pattern_index as os::raw::c_int
+                            && (*state_2).start_depth as os::raw::c_int
+                                == (*other_state).start_depth as os::raw::c_int
+                        {
+                            let mut left_contains_right: bool = false;
+                            let mut right_contains_left: bool = false;
+                            ts_query_cursor__compare_captures(
+                                self_0,
+                                state_2,
+                                other_state,
+                                &mut left_contains_right,
+                                &mut right_contains_left,
+                            );
+                            if left_contains_right {
+                                if (*state_2).step_index as os::raw::c_int
+                                    == (*other_state).step_index as os::raw::c_int
+                                {
+                                    capture_list_pool_release(
+                                        &mut (*self_0).capture_list_pool,
+                                        (*other_state).capture_list_id,
+                                    );
+                                    array__erase(
+                                        &mut (*self_0).states as *mut C2RustUnnamed_12
+                                            as *mut VoidArray,
+                                        ::std::mem::size_of::<QueryState>(),
+                                        j_1,
+                                    );
+                                    j_1 = j_1.wrapping_sub(1);
+                                    current_block_115 = 10783567741412653655;
+                                } else {
+                                    (*other_state)
+                                        .set_has_in_progress_alternatives(1 as os::raw::c_int != 0);
+                                    current_block_115 = 11359721434352816539;
+                                }
+                            } else {
+                                current_block_115 = 11359721434352816539;
+                            }
+                            match current_block_115 {
+                                10783567741412653655 => {}
+                                _ => {
+                                    if right_contains_left {
+                                        if (*state_2).step_index as os::raw::c_int
+                                            == (*other_state).step_index as os::raw::c_int
+                                        {
+                                            capture_list_pool_release(
+                                                &mut (*self_0).capture_list_pool,
+                                                (*state_2).capture_list_id,
+                                            );
+                                            array__erase(
+                                                &mut (*self_0).states as *mut C2RustUnnamed_12
+                                                    as *mut VoidArray,
+                                                ::std::mem::size_of::<QueryState>(),
+                                                i_3,
+                                            );
+                                            did_remove = 1 as os::raw::c_int != 0;
+                                            break;
+                                        } else {
+                                            (*state_2).set_has_in_progress_alternatives(
+                                                1 as os::raw::c_int != 0,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        j_1 = j_1.wrapping_add(1)
+                    }
+                    // If there the state is at the end of its pattern, remove it from the list
+                    // of in-progress states and add it to the list of finished states.
+                    if !did_remove {
+                        let mut next_step_0: *mut QueryStep = &mut *(*(*self_0).query)
+                            .steps
+                            .contents
+                            .offset((*state_2).step_index as isize)
+                            as *mut QueryStep;
+                        if (*next_step_0).depth as os::raw::c_int
+                            == PATTERN_DONE_MARKER as os::raw::c_int
+                        {
+                            if !(*state_2).has_in_progress_alternatives() {
+                                let fresh28 = (*self_0).next_state_id;
+                                (*self_0).next_state_id = (*self_0).next_state_id.wrapping_add(1);
+                                (*state_2).id = fresh28;
+                                array__grow(
+                                    &mut (*self_0).finished_states as *mut C2RustUnnamed_11
+                                        as *mut VoidArray,
+                                    1 as os::raw::c_int as usize,
+                                    ::std::mem::size_of::<QueryState>(),
+                                );
+                                let fresh29 = (*self_0).finished_states.size;
+                                (*self_0).finished_states.size =
+                                    (*self_0).finished_states.size.wrapping_add(1);
+                                *(*self_0).finished_states.contents.offset(fresh29 as isize) =
+                                    *state_2;
+                                array__erase(
+                                    &mut (*self_0).states as *mut C2RustUnnamed_12
+                                        as *mut VoidArray,
+                                    ::std::mem::size_of::<QueryState>(),
+                                    state_2.wrapping_offset_from_((*self_0).states.contents)
+                                        as os::raw::c_long
+                                        as u32,
+                                );
+                                i_3 = i_3.wrapping_sub(1)
+                            }
+                        }
+                    }
+                    i_3 = i_3.wrapping_add(1)
                 }
                 // Continue descending if possible.
                 if ts_tree_cursor_goto_first_child(&mut (*self_0).cursor) {
                     (*self_0).depth = (*self_0).depth.wrapping_add(1)
                 } else {
-                    (*self_0).ascending = true
+                    (*self_0).ascending = 1 as os::raw::c_int != 0
                 }
             }
         }
-        if (*self_0).finished_states.size != 0 as os::raw::c_int as os::raw::c_uint {
+        if !((*self_0).finished_states.size == 0 as os::raw::c_int as os::raw::c_uint) {
             break;
         }
     }
-    true
+    return 1 as os::raw::c_int != 0;
 }
-
-/// Advance to the next match of the currently running query.
-///
-/// If there is a match, write it to `*match` and return `true`.
-/// Otherwise, return `false`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_next_match(
     mut self_0: *mut TSQueryCursor,
     mut match_0: *mut TSQueryMatch,
 ) -> bool {
-    if (*self_0).finished_states.size == 0 as os::raw::c_int as os::raw::c_uint
-        && !ts_query_cursor__advance(self_0)
-    {
-        return false;
+    if (*self_0).finished_states.size == 0 as os::raw::c_int as os::raw::c_uint {
+        if !ts_query_cursor__advance(self_0) {
+            return 0 as os::raw::c_int != 0;
+        }
     }
     let mut state: *mut QueryState = &mut *(*self_0)
         .finished_states
@@ -2017,16 +2640,17 @@ pub unsafe extern "C" fn ts_query_cursor_next_match(
         as *mut QueryState;
     (*match_0).id = (*state).id;
     (*match_0).pattern_index = (*state).pattern_index;
-    (*match_0).capture_count = (*state).capture_count;
-    (*match_0).captures =
+    let mut captures: *const CaptureList =
         capture_list_pool_get(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
+    (*match_0).captures = (*captures).contents;
+    (*match_0).capture_count = (*captures).size as u16;
     capture_list_pool_release(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
     array__erase(
-        &mut (*self_0).finished_states as *mut TsQueryCursorFinishedStated as *mut VoidArray,
+        &mut (*self_0).finished_states as *mut C2RustUnnamed_11 as *mut VoidArray,
         ::std::mem::size_of::<QueryState>(),
         0 as os::raw::c_int as u32,
     );
-    true
+    return 1 as os::raw::c_int != 0;
 }
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_remove_match(
@@ -2040,8 +2664,7 @@ pub unsafe extern "C" fn ts_query_cursor_remove_match(
         if (*state).id == match_id {
             capture_list_pool_release(&mut (*self_0).capture_list_pool, (*state).capture_list_id);
             array__erase(
-                &mut (*self_0).finished_states as *mut TsQueryCursorFinishedStated
-                    as *mut VoidArray,
+                &mut (*self_0).finished_states as *mut C2RustUnnamed_11 as *mut VoidArray,
                 ::std::mem::size_of::<QueryState>(),
                 i,
             );
@@ -2051,10 +2674,6 @@ pub unsafe extern "C" fn ts_query_cursor_remove_match(
     }
 }
 
-/// Advance to the next capture of the currently running query.
-///
-/// If there is a capture, write its match to `*match` and its index within
-/// the matche's capture list to `*capture_index`. Otherwise, return `false`.
 #[no_mangle]
 pub unsafe extern "C" fn ts_query_cursor_next_capture(
     mut self_0: *mut TSQueryCursor,
@@ -2070,8 +2689,8 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
             // First, identify the position of the earliest capture in an unfinished
             // match. For a finished capture to be returned, it must be *before*
             // this position.
-            let mut first_unfinished_capture_byte: u32 = 4_294_967_295 as os::raw::c_uint;
-            let mut first_unfinished_pattern_index: u32 = 4_294_967_295 as os::raw::c_uint;
+            let mut first_unfinished_capture_byte: u32 = 0;
+            let mut first_unfinished_pattern_index: u32 = 0;
             let mut first_unfinished_state_index: u32 = 0;
             ts_query_cursor__first_in_progress_capture(
                 self_0,
@@ -2087,15 +2706,16 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
             while i < (*self_0).finished_states.size {
                 let mut state: *const QueryState =
                     &mut *(*self_0).finished_states.contents.offset(i as isize) as *mut QueryState;
-                if (*state).capture_count as os::raw::c_int
-                    > (*state).consumed_capture_count as os::raw::c_int
-                {
-                    let mut captures: *const TSQueryCapture = capture_list_pool_get(
-                        &mut (*self_0).capture_list_pool,
-                        (*state).capture_list_id,
-                    );
+                let mut captures: *const CaptureList = capture_list_pool_get(
+                    &mut (*self_0).capture_list_pool,
+                    (*state).capture_list_id,
+                );
+                if (*captures).size > (*state).consumed_capture_count() as os::raw::c_uint {
                     let mut capture_byte: u32 = ts_node_start_byte(
-                        (*captures.offset((*state).consumed_capture_count as isize)).node,
+                        (*(*captures)
+                            .contents
+                            .offset((*state).consumed_capture_count() as isize))
+                        .node,
                     );
                     if capture_byte < first_finished_capture_byte
                         || capture_byte == first_finished_capture_byte
@@ -2112,8 +2732,7 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
                         (*state).capture_list_id,
                     );
                     array__erase(
-                        &mut (*self_0).finished_states as *mut TsQueryCursorFinishedStated
-                            as *mut VoidArray,
+                        &mut (*self_0).finished_states as *mut C2RustUnnamed_11 as *mut VoidArray,
                         ::std::mem::size_of::<QueryState>(),
                         i,
                     );
@@ -2132,17 +2751,17 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
                     as *mut QueryState;
                 (*match_0).id = (*state_0).id;
                 (*match_0).pattern_index = (*state_0).pattern_index;
-                (*match_0).capture_count = (*state_0).capture_count;
-                (*match_0).captures = capture_list_pool_get(
+                let mut captures_0: *const CaptureList = capture_list_pool_get(
                     &mut (*self_0).capture_list_pool,
                     (*state_0).capture_list_id,
                 );
-                *capture_index = (*state_0).consumed_capture_count as u32;
-                (*state_0).consumed_capture_count =
-                    (*state_0).consumed_capture_count.wrapping_add(1);
-                return true;
+                (*match_0).captures = (*captures_0).contents;
+                (*match_0).capture_count = (*captures_0).size as u16;
+                *capture_index = (*state_0).consumed_capture_count() as u32;
+                (*state_0).set_consumed_capture_count((*state_0).consumed_capture_count() + 1);
+                return 1 as os::raw::c_int != 0;
             }
-            if capture_list_pool_is_empty(&(*self_0).capture_list_pool) {
+            if capture_list_pool_is_empty(&mut (*self_0).capture_list_pool) {
                 capture_list_pool_release(
                     &mut (*self_0).capture_list_pool,
                     (*(*self_0)
@@ -2152,7 +2771,7 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
                     .capture_list_id,
                 );
                 array__erase(
-                    &mut (*self_0).states as *mut TSQueryCursorStates as *mut VoidArray,
+                    &mut (*self_0).states as *mut C2RustUnnamed_12 as *mut VoidArray,
                     ::std::mem::size_of::<QueryState>(),
                     first_unfinished_state_index,
                 );
@@ -2161,7 +2780,7 @@ pub unsafe extern "C" fn ts_query_cursor_next_capture(
         // If there are no finished matches that are ready to be returned, then
         // continue finding more matches.
         if !ts_query_cursor__advance(self_0) {
-            return false;
+            return 0 as os::raw::c_int != 0;
         }
     }
 }
